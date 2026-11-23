@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Navigation -->
+    <string name="tab_pads">Pads</string>
+    <string name="tab_steps">Steps</string>
+    <string name="tab_piano_roll">Piano Roll</string>
+
+    <!-- Transport -->
+    <string name="play">Play</string>
+    <string name="stop">Stop</string>
+    <string name="record">Record</string>
+    <string name="undo">Undo</string>
+    <string name="redo">Redo</string>
+    <string name="tempo">Tempo</string>
+    <string name="bpm_value">%1$d BPM</string>
+    <string name="swing">Swing</string>
+    <string name="tap_tempo">Tap tempo</string>
+
+    <!-- Patterns -->
+    <string name="pattern">Pattern</string>
+    <string name="pattern_default_name">Pattern %1$d</string>
+    <string name="new_pattern">New pattern</string>
+    <string name="clone_pattern">Duplicate pattern</string>
+    <string name="delete_pattern">Delete pattern</string>
+    <string name="rename">Rename</string>
+    <string name="pattern_length">Length</string>
+    <string name="steps_count">%1$d steps</string>
+
+    <!-- Channels / instruments -->
+    <string name="add_channel">Add instrument</string>
+    <string name="channel_settings">Instrument settings</string>
+    <string name="volume">Volume</string>
+    <string name="pan">Pan</string>
+    <string name="mute">Mute</string>
+    <string name="mute_short">M</string>
+    <string name="solo">Solo</string>
+    <string name="solo_short">S</string>
+    <string name="delete_channel">Delete instrument</string>
+    <string name="clear_notes">Clear notes in this pattern</string>
+    <string name="select_channel">Choose instrument</string>
+    <string name="instrument_drum">Drum</string>
+    <string name="instrument_808">808 Bass</string>
+    <string name="instrument_synth">Synth</string>
+
+    <!-- Instrument parameters -->
+    <string name="tune">Tune</string>
+    <string name="decay">Decay</string>
+    <string name="glide">Glide</string>
+    <string name="drive">Drive</string>
+    <string name="punch">Punch</string>
+    <string name="waveform">Wave</string>
+    <string name="cutoff">Cutoff</string>
+    <string name="resonance">Resonance</string>
+    <string name="attack">Attack</string>
+    <string name="sustain">Sustain</string>
+    <string name="release">Release</string>
+    <string name="detune">Detune</string>
+    <string name="env_amount">Filter envelope</string>
+    <string name="choke_group">Choke group</string>
+    <string name="wave_saw">Saw</string>
+    <string name="wave_square">Square</string>
+    <string name="wave_triangle">Triangle</string>
+    <string name="wave_sine">Sine</string>
+    <string name="glide_hint">Overlap two 808 notes in the piano roll to make them slide.</string>
+
+    <!-- Drum sounds -->
+    <string name="drum_kick">Kick</string>
+    <string name="drum_snare">Snare</string>
+    <string name="drum_clap">Clap</string>
+    <string name="drum_hat_closed">Hi-Hat</string>
+    <string name="drum_hat_open">Open Hat</string>
+    <string name="drum_rim">Rim</string>
+    <string name="drum_tom">Tom</string>
+    <string name="drum_crash">Crash</string>
+    <string name="drum_perc">Perc</string>
+    <string name="drum_shaker">Shaker</string>
+    <string name="drum_chhing">Chhing (Khmer)</string>
+    <string name="drum_skor">Skor (Khmer)</string>
+
+    <!-- Step sequencer -->
+    <string name="velocity">Velocity</string>
+    <string name="velocity_mode">Edit velocity</string>
+    <string name="step_description">%1$s step %2$d</string>
+
+    <!-- Pads -->
+    <string name="note_repeat">Repeat</string>
+    <string name="repeat_off">Off</string>
+    <string name="pads_drums">Drums</string>
+    <string name="pads_keys">Keys</string>
+    <string name="octave_down">Octave down</string>
+    <string name="octave_up">Octave up</string>
+    <string name="record_hint">Press play and record, then tap pads to record into the pattern.</string>
+
+    <!-- Piano roll / scale -->
+    <string name="scale">Scale</string>
+    <string name="scale_lock">Scale lock</string>
+    <string name="key">Key</string>
+    <string name="snap">Snap</string>
+    <string name="piano_roll_hint">Tap to add · tap a note to delete · drag to move · drag its end to resize</string>
+    <string name="zoom_in">Zoom in</string>
+    <string name="zoom_out">Zoom out</string>
+
+    <!-- Projects -->
+    <string name="projects">Projects</string>
+    <string name="new_project">New project</string>
+    <string name="new_project_demo">New project with demo beat</string>
+    <string name="open">Open</string>
+    <string name="save_as">Save as</string>
+    <string name="saved">Saved</string>
+    <string name="delete">Delete</string>
+    <string name="cancel">Cancel</string>
+    <string name="ok">OK</string>
+    <string name="name">Name</string>
+    <string name="untitled">Untitled</string>
+    <string name="my_first_beat">My First Beat</string>
+    <string name="no_projects">No saved projects yet</string>
+    <string name="delete_confirm">Delete “%1$s”?</string>
+    <string name="current_project">Current: %1$s</string>
+
+    <!-- Settings / misc -->
+    <string name="more">More</string>
+    <string name="language">Language</string>
+    <string name="language_english">English</string>
+    <string name="language_khmer">ខ្មែរ (Khmer)</string>
+    <string name="language_system">System default</string>
+    <string name="audio_error">Could not start audio output</string>
+    <string name="load_error">Could not open project</string>
+    <string name="latency_value">Audio latency: %1$d ms</string>
+    <string name="about">About Jeang Beat</string>
+    <string name="khmer_sounds_note">Chhing and Skor are synthesised placeholders until real recordings are added.</string>
+</resources>

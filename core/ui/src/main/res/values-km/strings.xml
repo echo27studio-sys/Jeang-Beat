@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Khmer translation. Draft: please have a native speaker review. -->
+<resources>
+    <string name="tab_pads">ផេដ</string>
+    <string name="tab_steps">ជំហាន</string>
+    <string name="tab_piano_roll">ព្យាណូរ៉ូល</string>
+
+    <string name="play">ចាក់</string>
+    <string name="stop">ឈប់</string>
+    <string name="record">ថត</string>
+    <string name="undo">ត្រឡប់ក្រោយ</string>
+    <string name="redo">ធ្វើវិញ</string>
+    <string name="tempo">ល្បឿន</string>
+    <string name="bpm_value">%1$d BPM</string>
+    <string name="swing">ស្វីង</string>
+    <string name="tap_tempo">ចុចកំណត់ល្បឿន</string>
+
+    <string name="pattern">លំនាំ</string>
+    <string name="pattern_default_name">លំនាំ %1$d</string>
+    <string name="new_pattern">លំនាំថ្មី</string>
+    <string name="clone_pattern">ចម្លងលំនាំ</string>
+    <string name="delete_pattern">លុបលំនាំ</string>
+    <string name="rename">ប្តូរឈ្មោះ</string>
+    <string name="pattern_length">ប្រវែង</string>
+    <string name="steps_count">%1$d ជំហាន</string>
+
+    <string name="add_channel">បន្ថែមឧបករណ៍</string>
+    <string name="channel_settings">ការកំណត់ឧបករណ៍</string>
+    <string name="volume">កម្រិតសំឡេង</string>
+    <string name="pan">ឆ្វេង/ស្តាំ</string>
+    <string name="mute">បិទសំឡេង</string>
+    <string name="mute_short">M</string>
+    <string name="solo">តែមួយ</string>
+    <string name="solo_short">S</string>
+    <string name="delete_channel">លុបឧបករណ៍</string>
+    <string name="clear_notes">សម្អាតណោតក្នុងលំនាំនេះ</string>
+    <string name="select_channel">ជ្រើសរើសឧបករណ៍</string>
+    <string name="instrument_drum">ស្គរ</string>
+    <string name="instrument_808">បាស 808</string>
+    <string name="instrument_synth">ស៊ីនធ៍</string>
+
+    <string name="tune">កម្ពស់សំឡេង</string>
+    <string name="decay">រយៈពេលរលាយ</string>
+    <string name="glide">រអិល</string>
+    <string name="drive">ដ្រាយ</string>
+    <string name="punch">កម្លាំងវាយ</string>
+    <string name="waveform">រលក</string>
+    <string name="cutoff">ហ្វីលធ័រ</string>
+    <string name="resonance">រេសូណង់</string>
+    <string name="attack">ការចាប់ផ្តើម</string>
+    <string name="sustain">ការរក្សា</string>
+    <string name="release">ការបញ្ចប់</string>
+    <string name="detune">ឌីធូន</string>
+    <string name="env_amount">ស្រោមហ្វីលធ័រ</string>
+    <string name="choke_group">ក្រុមកាត់សំឡេង</string>
+    <string name="wave_saw">រណារ</string>
+    <string name="wave_square">ការ៉េ</string>
+    <string name="wave_triangle">ត្រីកោណ</string>
+    <string name="wave_sine">ស៊ីនុស</string>
+    <string name="glide_hint">ដាក់ណោត 808 ពីរឱ្យជាន់គ្នាក្នុងព្យាណូរ៉ូល ដើម្បីឱ្យវារអិល។</string>
+
+    <string name="drum_kick">ស្គរធំ (Kick)</string>
+    <string name="drum_snare">ស្នែរ</string>
+    <string name="drum_clap">ទះដៃ</string>
+    <string name="drum_hat_closed">ហាយហាត់</string>
+    <string name="drum_hat_open">ហាយហាត់បើក</string>
+    <string name="drum_rim">រីម</string>
+    <string name="drum_tom">តំ</string>
+    <string name="drum_crash">ឆាស</string>
+    <string name="drum_perc">ភឺខាសិន</string>
+    <string name="drum_shaker">អង្រួន</string>
+    <string name="drum_chhing">ឈិង</string>
+    <string name="drum_skor">ស្គរ (ខ្មែរ)</string>
+
+    <string name="velocity">កម្លាំង</string>
+    <string name="velocity_mode">កែកម្លាំង</string>
+    <string name="step_description">%1$s ជំហានទី %2$d</string>
+
+    <string name="note_repeat">ធ្វើម្តងទៀត</string>
+    <string name="repeat_off">បិទ</string>
+    <string name="pads_drums">ស្គរ</string>
+    <string name="pads_keys">ក្តារចុច</string>
+    <string name="octave_down">អុកតាវចុះ</string>
+    <string name="octave_up">អុកតាវឡើង</string>
+    <string name="record_hint">ចុចចាក់ និងថត បន្ទាប់មកប៉ះផេដដើម្បីថតចូលលំនាំ។</string>
+
+    <string name="scale">ស្កេល</string>
+    <string name="scale_lock">ចាក់សោស្កេល</string>
+    <string name="key">គន្លឹះ</string>
+    <string name="snap">ស្នាប</string>
+    <string name="piano_roll_hint">ប៉ះដើម្បីបន្ថែម · ប៉ះណោតដើម្បីលុប · អូសដើម្បីផ្លាស់ទី · អូសចុងណោតដើម្បីប្តូរប្រវែង</string>
+    <string name="zoom_in">ពង្រីក</string>
+    <string name="zoom_out">បង្រួម</string>
+
+    <string name="projects">គម្រោង</string>
+    <string name="new_project">គម្រោងថ្មី</string>
+    <string name="new_project_demo">គម្រោងថ្មីជាមួយបទគំរូ</string>
+    <string name="open">បើក</string>
+    <string name="save_as">រក្សាទុកជា</string>
+    <string name="saved">បានរក្សាទុក</string>
+    <string name="delete">លុប</string>
+    <string name="cancel">បោះបង់</string>
+    <string name="ok">យល់ព្រម</string>
+    <string name="name">ឈ្មោះ</string>
+    <string name="untitled">គ្មានចំណងជើង</string>
+    <string name="my_first_beat">បទដំបូងរបស់ខ្ញុំ</string>
+    <string name="no_projects">មិនទាន់មានគម្រោងដែលបានរក្សាទុកទេ</string>
+    <string name="delete_confirm">លុប “%1$s”?</string>
+    <string name="current_project">បច្ចុប្បន្ន៖ %1$s</string>
+
+    <string name="more">ច្រើនទៀត</string>
+    <string name="language">ភាសា</string>
+    <string name="language_english">English</string>
+    <string name="language_khmer">ខ្មែរ</string>
+    <string name="language_system">តាមប្រព័ន្ធ</string>
+    <string name="audio_error">មិនអាចចាប់ផ្តើមសំឡេងបានទេ</string>
+    <string name="load_error">មិនអាចបើកគម្រោងបានទេ</string>
+    <string name="latency_value">ការពន្យារសំឡេង៖ %1$d ms</string>
+    <string name="about">អំពី Jeang Beat</string>
+    <string name="khmer_sounds_note">ឈិង និងស្គរ ជាសំឡេងសំយោគបណ្តោះអាសន្ន រហូតដល់មានការថតសំឡេងពិត។</string>
+</resources>
