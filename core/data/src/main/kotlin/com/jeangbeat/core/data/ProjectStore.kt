@@ -1,5 +1,6 @@
 package com.jeangbeat.core.data
 
+import com.jeangbeat.core.model.DefaultProjects
 import com.jeangbeat.core.model.Project
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
@@ -75,8 +76,9 @@ class ProjectStore(private val directory: File) {
 
         fun encode(project: Project): String = json.encodeToString(Project.serializer(), project)
 
+        /** Parses a project and upgrades it from older file versions. */
         fun decode(text: String): Project = try {
-            json.decodeFromString(Project.serializer(), text)
+            DefaultProjects.migrate(json.decodeFromString(Project.serializer(), text))
         } catch (e: SerializationException) {
             throw ProjectLoadException("Not a valid Jeang Beat project", e)
         } catch (e: IllegalArgumentException) {

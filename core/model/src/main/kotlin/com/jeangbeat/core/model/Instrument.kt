@@ -74,17 +74,30 @@ sealed interface Instrument {
         /** Filter envelope amount 0..1. */
         val envAmount: Float = 0.35f,
     ) : Instrument
+
+    /** Plays an imported audio file (one-shot). Pitch [rootPitch] plays it unchanged. */
+    @Serializable
+    @SerialName("sampler")
+    data class Sampler(
+        val sampleId: Int,
+        val rootPitch: Int = ROOT_PITCH,
+        /** Semitones, -24..24. */
+        val tune: Float = 0f,
+        /** 0.05..1, where 1 is the full length of the sample. */
+        val decay: Float = 1f,
+    ) : Instrument
 }
 
 /** The pitch a step-sequencer step plays for this instrument. */
 val Instrument.defaultPitch: Int
     get() = when (this) {
         is Instrument.Drum -> ROOT_PITCH
+        is Instrument.Sampler -> rootPitch
         is Instrument.Bass808 -> 36 // C2
         is Instrument.Synth -> 60 // C4
     }
 
 /** True for instruments that are played melodically (piano roll first). */
-val Instrument.isMelodic: Boolean get() = this !is Instrument.Drum
+val Instrument.isMelodic: Boolean get() = this is Instrument.Bass808 || this is Instrument.Synth
 
 const val ROOT_PITCH = 60
