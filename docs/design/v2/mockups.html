@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jeang Beat 2.0 Mockups</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Kantumruy+Pro:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  /* Draft UI for Jeang Beat 2.0: Playlist / Pattern / Mixer + Piano Roll. Rendered to PNG with Playwright. */
+  :root { --bg:#0F1115; --surface:#181B22; --raised:#222632; --outline:#2E3342; --grid:#1B1F28; --text:#E8EAF0;
+          --dim:#9AA1B2; --faint:#5C6375; --gold:#F2B33D; --red:#E5484D; --teal:#3DD6C6; --blue:#5B8CFF;
+          --purple:#B57BFF; --green:#4CD964; --orange:#FF8A3D; --pink:#FF6FB1; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:#05060A; font-family:Inter,"Kantumruy Pro",sans-serif; color:var(--text); padding:24px; display:flex; gap:24px; flex-wrap:wrap; }
+  .phone { width:390px; height:844px; background:var(--bg); border-radius:36px; overflow:hidden; position:relative; display:flex; flex-direction:column; border:1px solid #1d2029; }
+  .status { height:30px; flex:none; display:flex; justify-content:space-between; align-items:center; padding:0 26px; font-size:13px; font-weight:600; }
+  /* transport */
+  .transport { background:var(--surface); padding:7px 10px; display:flex; align-items:center; gap:6px; flex:none; }
+  .play { width:38px; height:38px; border-radius:50%; background:var(--gold); display:grid; place-items:center; flex:none; }
+  .play i { width:0; height:0; border-left:11px solid #000; border-top:7px solid transparent; border-bottom:7px solid transparent; margin-left:3px; }
+  .play.stop { background:var(--text); } .play.stop i { border:0; width:12px; height:12px; background:#000; margin:0; border-radius:2px; }
+  .rec { width:13px; height:13px; border-radius:50%; background:#5C6375; margin:0 3px; flex:none; }
+  .patsong { display:flex; border-radius:8px; overflow:hidden; font-size:11px; font-weight:800; flex:none; }
+  .patsong span { padding:7px 7px; background:var(--raised); color:var(--dim); }
+  .patsong span.on { background:var(--gold); color:#1a1400; }
+  .lcd { font-family:"JetBrains Mono",monospace; font-size:13px; font-weight:700; background:#0B0D11; border:1px solid var(--outline); border-radius:7px; padding:6px 7px; color:var(--gold); white-space:nowrap; }
+  .icon { color:var(--dim); font-size:16px; width:22px; text-align:center; flex:none; }
+  /* toolbars */
+  .tools { display:flex; align-items:center; gap:4px; padding:6px 8px; background:#13161C; border-bottom:1px solid var(--outline); flex:none; }
+  .tool { width:32px; height:30px; border-radius:7px; display:grid; place-items:center; font-size:14px; color:var(--dim); }
+  .tool.on { background:var(--gold); color:#1a1400; }
+  .tchip { font-size:11px; font-weight:700; padding:6px 8px; border-radius:7px; background:var(--raised); white-space:nowrap; }
+  .tchip.gold { color:var(--gold); }
+  .sep { width:1px; height:22px; background:var(--outline); margin:0 3px; }
+  /* bottom nav */
+  .nav { margin-top:auto; background:var(--surface); height:70px; display:flex; justify-content:space-around; align-items:center; padding-bottom:8px; flex:none; }
+  .nav div { display:flex; flex-direction:column; align-items:center; gap:4px; font-size:11px; color:var(--dim); font-weight:600; }
+  .nav .ic { width:52px; height:28px; border-radius:14px; display:grid; place-items:center; font-size:15px; }
+  .nav .on { color:var(--text); } .nav .on .ic { background:rgba(242,179,61,.28); }
+  .tag2 { position:absolute; right:14px; bottom:80px; font-size:10px; color:var(--faint); }
+  /* ---- playlist ---- */
+  .pl { flex:1; display:flex; flex-direction:column; min-height:0; }
+  .ruler { display:flex; height:24px; flex:none; background:#13161C; border-bottom:1px solid var(--outline); position:relative; }
+  .ruler .lab { width:74px; flex:none; }
+  .ruler .bars { flex:1; position:relative; }
+  .ruler .b { position:absolute; top:5px; font-size:10px; font-weight:700; color:var(--dim); }
+  .loop { position:absolute; top:0; height:5px; background:var(--gold); opacity:.8; border-radius:2px; }
+  .tracks { flex:1; position:relative; overflow:hidden; }
+  .trk { display:flex; height:46px; border-bottom:1px solid #1E222B; }
+  .trk .nm { width:74px; flex:none; background:var(--surface); display:flex; align-items:center; gap:6px; padding-left:6px; font-size:11px; font-weight:700; }
+  .trk .nm i { width:4px; height:30px; border-radius:2px; }
+  .trk .lane { flex:1; position:relative; background:repeating-linear-gradient(90deg, transparent 0 39px, #20242E 39px 40px); }
+  .clip { position:absolute; top:3px; height:40px; border-radius:6px; overflow:hidden; font-size:9px; font-weight:800; padding:3px 5px; color:#0F1115; }
+  .clip svg { position:absolute; left:0; bottom:2px; }
+  .clip.sel { outline:2px solid #fff; }
+  .playhead { position:absolute; top:0; bottom:0; width:2px; background:#fff; box-shadow:0 0 8px rgba(255,255,255,.6); }
+  .picker { flex:none; display:flex; gap:6px; padding:8px; background:#13161C; border-top:1px solid var(--outline); overflow:hidden; }
+  .pk { font-size:11px; font-weight:800; padding:8px 10px; border-radius:8px; white-space:nowrap; color:#0F1115; }
+  .pk.add { background:var(--raised); color:var(--gold); }
+  .pk.cur { outline:2px solid #fff; }
+  /* ---- pattern / channel rack ---- */
+  .rack-head { display:flex; align-items:center; gap:6px; padding:8px 10px; flex:none; }
+  .seg { display:flex; background:var(--raised); border-radius:8px; padding:2px; }
+  .seg span { padding:5px 9px; font-size:11px; font-weight:700; border-radius:7px; }
+  .seg span.on { background:var(--gold); color:#1a1400; }
+  .knob { width:22px; height:22px; border-radius:50%; background:radial-gradient(circle at 50% 50%, #2b303c 55%, #11141a 56%); position:relative; flex:none; border:1.5px solid #3a3f4d; }
+  .knob::after { content:""; position:absolute; left:50%; top:2px; width:2px; height:7px; background:var(--gold); transform-origin:50% 8px; transform:translateX(-50%) rotate(var(--a,0deg)); border-radius:1px; }
+  .rack { flex:1; overflow:hidden; }
+  .row { display:flex; align-items:center; gap:4px; padding:3px 6px; height:38px; }
+  .led { width:9px; height:9px; border-radius:50%; background:var(--green); box-shadow:0 0 6px var(--green); flex:none; }
+  .led.off { background:#2b303c; box-shadow:none; }
+  .mix { width:20px; height:20px; border-radius:4px; background:#0B0D11; border:1px solid var(--outline); font-size:9px; font-weight:800; color:var(--gold); display:grid; place-items:center; font-family:"JetBrains Mono",monospace; flex:none; }
+  .cname { width:58px; height:28px; border-radius:6px; background:#2B303C; font-size:10px; font-weight:800; display:flex; align-items:center; padding-left:6px; flex:none; border-left:3px solid; overflow:hidden; white-space:nowrap; }
+  .cname.sel { background:#3A4152; }
+  .steps { display:flex; gap:2px; }
+  .st { width:11px; height:26px; border-radius:3px; background:#3B4150; }
+  .st.alt { background:#5B2F33; }
+  .st.on { background:#E8EAF0; box-shadow:inset 0 -3px 0 rgba(0,0,0,.2); }
+  .st.alt.on { background:#FFB3B5; }
+  .st.now { outline:1.5px solid var(--gold); }
+  .mini-roll { width:206px; height:26px; border-radius:4px; background:#171A22; position:relative; border:1px solid #2B303C; }
+  .graph { flex:none; background:#13161C; border-top:1px solid var(--outline); padding:6px 8px 8px; }
+  .graph .tabs { display:flex; gap:6px; margin-bottom:6px; }
+  .graph .tabs span { font-size:10px; font-weight:800; padding:4px 8px; border-radius:6px; background:var(--raised); color:var(--dim); }
+  .graph .tabs span.on { background:var(--gold); color:#1a1400; }
+  .bars { display:flex; align-items:flex-end; gap:2px; height:46px; padding-left:160px; }
+  .bars i { width:11px; background:var(--gold); border-radius:2px 2px 0 0; opacity:.85; }
+  .hint { font-size:10px; color:var(--faint); padding:0 10px 4px; }
+  /* ---- piano roll ---- */
+  .pr-top { display:flex; align-items:center; gap:8px; padding:8px 10px; background:var(--surface); flex:none; }
+  .actions { display:flex; gap:5px; padding:6px 8px; overflow:hidden; flex:none; border-bottom:1px solid var(--outline); }
+  .act { font-size:10px; font-weight:800; padding:6px 8px; border-radius:7px; background:var(--raised); white-space:nowrap; }
+  .act.gold { background:#3a2c10; color:var(--gold); }
+  .roll { flex:1; display:flex; min-height:0; }
+  .keys { width:40px; flex:none; }
+  .grid { flex:1; position:relative; overflow:hidden; }
+  .lane-tabs { display:flex; gap:6px; padding:6px 8px; background:#13161C; border-top:1px solid var(--outline); flex:none; }
+  .lane-tabs span { font-size:10px; font-weight:800; padding:4px 8px; border-radius:6px; background:var(--raised); color:var(--dim); }
+  .lane-tabs span.on { background:var(--gold); color:#1a1400; }
+  .vlane { height:58px; background:#13161C; position:relative; flex:none; }
+  /* ---- mixer ---- */
+  .strips { display:flex; gap:4px; padding:8px 6px; flex:none; overflow:hidden; background:#101318; }
+  .strip { width:58px; flex:none; background:var(--surface); border-radius:8px; padding:5px 4px; display:flex; flex-direction:column; align-items:center; gap:5px; position:relative; }
+  .strip.master { background:#1E1A10; }
+  .strip.sel { outline:2px solid var(--gold); }
+  .strip .num { font-size:9px; font-weight:800; color:var(--dim); font-family:"JetBrains Mono",monospace; }
+  .strip .snm { font-size:10px; font-weight:800; width:100%; text-align:center; white-space:nowrap; overflow:hidden; }
+  .strip .cbar { width:100%; height:3px; border-radius:2px; }
+  .fxdots { display:flex; gap:2px; height:5px; }
+  .fxdots i { width:5px; height:5px; border-radius:50%; background:#2b303c; }
+  .fxdots i.on { background:var(--teal); }
+  .fader-area { display:flex; gap:4px; height:170px; align-items:flex-end; }
+  .meter { width:5px; height:100%; background:#0B0D11; border-radius:2px; position:relative; overflow:hidden; }
+  .meter b { position:absolute; bottom:0; left:0; right:0; background:linear-gradient(0deg, #4CD964 0%, #4CD964 65%, #F2B33D 82%, #E5484D 96%); }
+  .track { width:6px; height:100%; background:#0B0D11; border-radius:3px; position:relative; }
+  .cap { position:absolute; left:-9px; width:24px; height:13px; border-radius:3px; background:#C9CCD4; box-shadow:0 2px 4px rgba(0,0,0,.5); }
+  .cap::after { content:""; position:absolute; left:3px; right:3px; top:6px; height:1px; background:#555; }
+  .ms { display:flex; gap:3px; }
+  .ms span { font-size:9px; font-weight:900; width:18px; height:16px; border-radius:4px; background:var(--raised); display:grid; place-items:center; color:var(--dim); }
+  .ms span.m { background:var(--red); color:#fff; }
+  .route { font-size:9px; font-weight:800; color:var(--gold); }
+  .panel { flex:1; background:var(--surface); border-top:1px solid var(--outline); padding:8px 10px; display:flex; flex-direction:column; gap:6px; min-height:0; }
+  .ptitle { display:flex; align-items:center; gap:8px; font-size:13px; font-weight:800; }
+  .ptabs { display:flex; gap:6px; }
+  .ptabs span { font-size:10px; font-weight:800; padding:5px 9px; border-radius:7px; background:var(--raised); color:var(--dim); }
+  .ptabs span.on { background:var(--gold); color:#1a1400; }
+  .slot { display:flex; align-items:center; gap:8px; background:#13161C; border-radius:8px; padding:6px 8px; font-size:12px; font-weight:700; }
+  .slot .n { font-family:"JetBrains Mono",monospace; font-size:10px; color:var(--faint); width:14px; }
+  .slot .pw { width:10px; height:10px; border-radius:50%; background:var(--green); box-shadow:0 0 5px var(--green); }
+  .slot .pw.off { background:#2b303c; box-shadow:none; }
+  .slot .fxn { flex:1; }
+  .slot .mixk { font-size:9px; color:var(--dim); }
+  .slot.empty { color:var(--faint); border:1px dashed #2E3342; background:none; }
+  .eq { height:62px; background:#0B0D11; border-radius:8px; position:relative; overflow:hidden; }
+  .sendrow { display:flex; align-items:center; gap:8px; font-size:11px; font-weight:700; }
+  .sendrow .bar { flex:1; height:6px; border-radius:3px; background:#0B0D11; position:relative; }
+  .sendrow .bar b { position:absolute; left:0; top:0; bottom:0; border-radius:3px; background:var(--gold); }
+</style>
+</head>
+<body>
+
+<!-- ================= 1. PLAYLIST ================= -->
+<div class="phone" id="p1">
+  <div class="status"><span>12:10</span><span>▮▮▮ 80%</span></div>
+  <div class="transport">
+    <div class="play stop"><i></i></div><div class="rec"></div>
+    <div class="patsong"><span>PAT</span><span class="on">SONG</span></div>
+    <div class="lcd">05:2:00</div><div class="lcd">140</div>
+    <div class="icon">↶</div><div class="icon">↷</div><div class="icon">⋮</div>
+  </div>
+  <div class="tools">
+    <div class="tool on">✎</div><div class="tool">▤</div><div class="tool">⬚</div><div class="tool">✂</div><div class="tool">⌫</div><div class="tool">◌</div>
+    <div class="sep"></div><div class="tchip">⊞ Bar</div><div class="tchip gold">■ Pattern 2 ▾</div>
+  </div>
+  <div class="pl">
+    <div class="ruler"><div class="lab"></div><div class="bars" id="ruler"></div></div>
+    <div class="tracks" id="tracks"></div>
+  </div>
+  <div class="picker" id="picker"></div>
+  <div class="nav"><div class="on"><span class="ic">▤</span>Playlist</div><div><span class="ic">▦</span>Pattern</div><div><span class="ic">⫼</span>Mixer</div></div>
+</div>
+
+<!-- ================= 2. PATTERN (channel rack) ================= -->
+<div class="phone" id="p2">
+  <div class="status"><span>12:11</span><span>▮▮▮ 80%</span></div>
+  <div class="transport">
+    <div class="play"><i></i></div><div class="rec"></div>
+    <div class="patsong"><span class="on">PAT</span><span>SONG</span></div>
+    <div class="lcd">01:3:00</div><div class="lcd">140</div>
+    <div class="icon">↶</div><div class="icon">↷</div><div class="icon">⋮</div>
+  </div>
+  <div class="rack-head">
+    <div class="tchip gold">■ Pattern 1 ▾</div>
+    <div class="seg"><span class="on">▦ Rack</span><span>◯ Ring</span></div>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--dim)">SWING<div class="knob" style="--a:-30deg"></div></div>
+    <div class="tchip" style="color:var(--gold)">＋</div>
+  </div>
+  <div class="rack" id="rack"></div>
+  <div class="hint">Tap a name → Piano Roll · long-press → instrument settings · ▪ box = mixer track</div>
+  <div class="graph">
+    <div class="tabs"><span class="on">Velocity</span><span>Pan</span><span>Pitch</span><span>Swing</span><span style="margin-left:auto;background:none;color:var(--faint)">Graph editor · Hi-Hat</span></div>
+    <div class="bars" id="graphbars"></div>
+  </div>
+  <div class="nav"><div><span class="ic">▤</span>Playlist</div><div class="on"><span class="ic">▦</span>Pattern</div><div><span class="ic">⫼</span>Mixer</div></div>
+</div>
+
+<!-- ================= 3. PIANO ROLL (opened from Pattern) ================= -->
+<div class="phone" id="p3">
+  <div class="status"><span>12:12</span><span>▮▮▮ 79%</span></div>
+  <div class="pr-top">
+    <div style="font-size:18px">←</div>
+    <div style="flex:1"><div style="font-size:14px;font-weight:800">Piano Roll · <span style="color:var(--teal)">808</span></div><div style="font-size:10px;color:var(--dim);font-weight:600">Pattern 1 · C minor · 1 bar</div></div>
+    <div class="play" style="width:34px;height:34px"><i></i></div>
+  </div>
+  <div class="tools">
+    <div class="tool on">✎</div><div class="tool">▤</div><div class="tool">⬚</div><div class="tool">✂</div><div class="tool">⌫</div><div class="tool">◌</div><div class="tool">⤴</div>
+    <div class="sep"></div><div class="tchip">⊞ 1/16</div><div class="tchip gold">♪ Cm</div>
+  </div>
+  <div class="actions">
+    <span class="act">Quantize</span><span class="act">± Transpose</span><span class="act">⧉ Duplicate</span><span class="act gold">♫ Chord ▾</span><span class="act">⇄ Legato</span><span class="act">Slide</span>
+  </div>
+  <div class="roll">
+    <div class="keys"><svg id="keys" width="40" height="440"></svg></div>
+    <div class="grid"><svg id="roll" width="350" height="440"></svg></div>
+  </div>
+  <div class="lane-tabs"><span class="on">Velocity</span><span>Pan</span><span>Fine pitch</span><span>Release</span><span style="margin-left:auto;background:none;color:var(--faint)">3 notes selected</span></div>
+  <div class="vlane"><svg id="vel" width="390" height="58"></svg></div>
+  <div class="nav"><div><span class="ic">▤</span>Playlist</div><div class="on"><span class="ic">▦</span>Pattern</div><div><span class="ic">⫼</span>Mixer</div></div>
+</div>
+
+<!-- ================= 4. MIXER ================= -->
+<div class="phone" id="p4">
+  <div class="status"><span>12:13</span><span>▮▮▮ 79%</span></div>
+  <div class="transport">
+    <div class="play stop"><i></i></div><div class="rec"></div>
+    <div class="patsong"><span>PAT</span><span class="on">SONG</span></div>
+    <div class="lcd">03:1:00</div><div class="lcd">140</div>
+    <div class="icon">↶</div><div class="icon">↷</div><div class="icon">⋮</div>
+  </div>
+  <div class="strips" id="strips"></div>
+  <div class="panel">
+    <div class="ptitle"><span style="width:10px;height:10px;border-radius:3px;background:var(--teal)"></span>Insert 4 · 808<span style="margin-left:auto;font-size:10px;color:var(--dim)">→ Master</span></div>
+    <div class="ptabs"><span class="on">Effects</span><span>EQ</span><span>Routing</span><span>Sidechain</span></div>
+    <div class="slot"><span class="n">1</span><span class="pw"></span><span class="fxn">JB Parametric EQ</span><span class="mixk">MIX</span><div class="knob" style="--a:130deg"></div></div>
+    <div class="slot"><span class="n">2</span><span class="pw"></span><span class="fxn">JB Compressor <span style="color:var(--gold);font-size:10px">◀ SC: 1 Kick</span></span><span class="mixk">MIX</span><div class="knob" style="--a:130deg"></div></div>
+    <div class="slot"><span class="n">3</span><span class="pw off"></span><span class="fxn" style="color:var(--dim)">JB Saturator (bypassed)</span><span class="mixk">MIX</span><div class="knob" style="--a:40deg"></div></div>
+    <div class="slot empty"><span class="n">4</span><span class="fxn">＋ Add effect</span></div>
+    <div class="eq"><svg id="eq" width="370" height="62"></svg></div>
+    <div class="sendrow"><span style="width:96px">Send → 7 Reverb</span><div class="bar"><b style="width:28%"></b></div><span style="width:30px;text-align:right">28%</span></div>
+    <div class="sendrow"><span style="width:96px">Send → 8 Delay</span><div class="bar"><b style="width:0%"></b></div><span style="width:30px;text-align:right">0%</span></div>
+  </div>
+  <div class="nav"><div><span class="ic">▤</span>Playlist</div><div><span class="ic">▦</span>Pattern</div><div class="on"><span class="ic">⫼</span>Mixer</div></div>
+</div>
+
+<script>
+const ns = 'http://www.w3.org/2000/svg';
+const el = (t, a, p) => { const e = document.createElementNS(ns, t); for (const k in a) e.setAttribute(k, a[k]); p.appendChild(e); return e; };
+const COL = { p1:'#F2B33D', p2:'#E5484D', p3:'#3DD6C6', p4:'#B57BFF', p5:'#5B8CFF' };
+
+/* ---------- Playlist ---------- */
+const BAR = 40;  // px per bar
+const ruler = document.getElementById('ruler');
+for (let b = 1; b <= 8; b++) { const d = document.createElement('span'); d.className = 'b'; d.style.left = ((b-1)*BAR + 3) + 'px'; d.textContent = b; ruler.appendChild(d); }
+const lp = document.createElement('div'); lp.className = 'loop'; lp.style.left = (4*BAR) + 'px'; lp.style.width = (4*BAR) + 'px'; ruler.appendChild(lp);
+const tracks = [
+  { name:'Drums', color:'#F2B33D', clips:[[0,4,'p1','Pattern 1'],[4,4,'p2','Pattern 2',true]] },
+  { name:'808', color:'#3DD6C6', clips:[[2,2,'p3','808 Line'],[4,4,'p3','808 Line']] },
+  { name:'Keys', color:'#B57BFF', clips:[[0,8,'p4','Chords']] },
+  { name:'Perc', color:'#E5484D', clips:[[4,2,'p2','Pattern 2'],[6,2,'p2','Pattern 2']] },
+  { name:'Vocal', color:'#5B8CFF', clips:[[4,4,'p5','Hook.wav']] },
+  { name:'Auto', color:'#9AA1B2', clips:[[0,8,'auto','Filter ↗']] },
+  { name:'Track 7', color:'#2E3342', clips:[] },
+  { name:'Track 8', color:'#2E3342', clips:[] },
+];
+const tr = document.getElementById('tracks');
+tracks.forEach(t => {
+  const row = document.createElement('div'); row.className = 'trk';
+  row.innerHTML = `<div class="nm"><i style="background:${t.color}"></i>${t.name}</div><div class="lane"></div>`;
+  const lane = row.querySelector('.lane');
+  t.clips.forEach(([start, len, key, label, sel]) => {
+    const c = document.createElement('div'); c.className = 'clip' + (sel ? ' sel' : '');
+    const color = key === 'auto' ? '#3A4152' : COL[key];
+    c.style.left = (start*BAR+1) + 'px'; c.style.width = (len*BAR-2) + 'px'; c.style.background = color;
+    if (key === 'auto') c.style.color = '#E8EAF0';
+    c.textContent = label;
+    const svg = document.createElementNS(ns, 'svg'); svg.setAttribute('width', len*BAR); svg.setAttribute('height', 22);
+    if (key === 'auto') {  // automation curve
+      el('path', {d:`M2 20 C ${len*BAR*0.4} 20, ${len*BAR*0.6} 3, ${len*BAR-4} 3`, stroke:'#F2B33D', 'stroke-width':2, fill:'none'}, svg);
+    } else if (key === 'p5') {  // audio waveform
+      for (let x = 2; x < len*BAR-2; x += 2) { const h = 3 + Math.abs(Math.sin(x*0.37)*Math.cos(x*0.11))*14; el('rect', {x, y:11-h/2, width:1.2, height:h, fill:'rgba(0,0,0,.45)'}, svg); }
+    } else {  // note preview: repeat a little rhythm per bar
+      for (let b = 0; b < len; b++) [0,7,10,13].forEach((s,i) => el('rect', {x: b*BAR + 3 + s*2.1, y: 4 + (i*4)%14, width: key==='p4'?BAR-6:3, height:2.5, fill:'rgba(0,0,0,.5)'}, svg));
+    }
+    c.appendChild(svg); lane.appendChild(c);
+  });
+  tr.appendChild(row);
+});
+const ph = document.createElement('div'); ph.className = 'playhead'; ph.style.left = (74 + 4.25*BAR) + 'px'; tr.appendChild(ph);
+const picker = document.getElementById('picker');
+[['Pattern 1','p1'],['Pattern 2','p2',1],['808 Line','p3'],['Chords','p4']].forEach(([n,k,cur]) => {
+  const s = document.createElement('span'); s.className = 'pk' + (cur ? ' cur' : ''); s.style.background = COL[k]; s.textContent = n; picker.appendChild(s); });
+const add = document.createElement('span'); add.className = 'pk add'; add.textContent = '＋ New'; picker.appendChild(add);
+
+/* ---------- Pattern / channel rack ---------- */
+const rack = document.getElementById('rack');
+const chans = [
+  { n:'Kick', c:'#F2B33D', mix:1, hits:[0,7,10], vol:-20, pan:0 },
+  { n:'Snare', c:'#E5484D', mix:2, hits:[8], vol:-40, pan:0 },
+  { n:'Clap', c:'#FF8A3D', mix:2, hits:[8], vol:-60, pan:0 },
+  { n:'Hi-Hat', c:'#3DD6C6', mix:3, hits:[0,2,4,6,8,10,12,14,15], vol:-70, pan:20, sel:true },
+  { n:'Open Hat', c:'#3DD6C6', mix:3, hits:[6], vol:-80, pan:20 },
+  { n:'Chhing', c:'#B57BFF', mix:5, hits:[12], vol:-90, pan:-40, mute:true },
+  { n:'Skor', c:'#B57BFF', mix:5, hits:[3,11], vol:-75, pan:-20 },
+  { n:'808', c:'#3DD6C6', mix:4, roll:[[0,6,3],[7,3,6],[10,6,3]], vol:-30, pan:0 },
+  { n:'Keys', c:'#B57BFF', mix:6, roll:[[0,8,10],[0,8,13],[0,8,16],[8,8,7],[8,8,10],[8,8,13]], vol:-60, pan:0 },
+];
+chans.forEach(ch => {
+  const r = document.createElement('div'); r.className = 'row';
+  r.innerHTML = `<span class="led ${ch.mute?'off':''}"></span><div class="knob" style="--a:${ch.pan}deg" title="pan"></div><div class="knob" style="--a:${ch.vol+100}deg" title="vol"></div><span class="mix">${ch.mix}</span><span class="cname ${ch.sel?'sel':''}" style="border-color:${ch.c};${ch.mute?'color:#5C6375':''}">${ch.n}</span>`;
+  if (ch.roll) {  // melodic channel: mini piano roll instead of steps (FL behaviour)
+    const m = document.createElement('div'); m.className = 'mini-roll';
+    const svg = document.createElementNS(ns, 'svg'); svg.setAttribute('width', 206); svg.setAttribute('height', 26);
+    ch.roll.forEach(([s, len, p]) => el('rect', {x: 2 + s*12.8, y: 22 - p*1.1, width: len*12.8-2, height: 3, rx:1, fill: ch.c}, svg));
+    m.appendChild(svg); r.appendChild(m);
+  } else {
+    const st = document.createElement('div'); st.className = 'steps';
+    for (let s = 0; s < 16; s++) {
+      const b = document.createElement('span');
+      b.className = 'st' + (Math.floor(s/4) % 2 ? ' alt' : '') + (ch.hits.includes(s) ? ' on' : '') + (s === 8 ? ' now' : '');
+      st.appendChild(b);
+    }
+    r.appendChild(st);
+  }
+  rack.appendChild(r);
+});
+const gb = document.getElementById('graphbars');
+[100,0,72,0,90,0,70,0,100,0,72,0,90,0,64,52].forEach(v => { const i = document.createElement('i'); i.style.height = (v*0.44) + 'px'; if (!v) i.style.opacity = 0; gb.appendChild(i); });
+
+/* ---------- Piano roll ---------- */
+const keys = document.getElementById('keys'), roll = document.getElementById('roll'), vel = document.getElementById('vel');
+const ROW = 16, low = 30, high = 56, STEP = 21.5;  // pitches C#1..G#3 shown
+const black = p => [1,3,6,8,10].includes(p % 12);
+const inCm = p => [0,2,3,5,7,8,10].includes(p % 12);
+let y = 0;
+for (let p = high; p >= low; p--, y += ROW) {
+  el('rect', {x:0, y, width:40, height:ROW-1, fill: black(p) ? '#1C1F26' : '#D9DCE3'}, keys);
+  if (p % 12 === 0) { const t = el('text', {x:4, y:y+12, 'font-size':9, 'font-weight':700, fill:'#000', 'font-family':'Inter'}, keys); t.textContent = 'C' + (Math.floor(p/12)-1); }
+  el('rect', {x:0, y, width:350, height:ROW, fill: p % 12 === 0 ? '#222632' : (!inCm(p) ? '#0B0D11' : (black(p) ? '#14171D' : '#0F1115'))}, roll);
+  el('line', {x1:0, y1:y+ROW, x2:350, y2:y+ROW, stroke:'#1E222B'}, roll);
+}
+for (let s = 0; s <= 16; s++) el('line', {x1:s*STEP, y1:0, x2:s*STEP, y2:440, stroke: s % 4 === 0 ? '#353B4C' : '#1E222B', 'stroke-width': s % 4 === 0 ? 1.5 : 1}, roll);
+const rowOf = p => (high - p) * ROW;
+// ghost notes from Keys
+[[0,8,48],[0,8,51],[0,8,55],[8,8,44],[8,8,48],[8,8,51]].forEach(([s,l,p]) => el('rect', {x:s*STEP+1, y:rowOf(p)+2, width:l*STEP-2, height:ROW-4, rx:3, fill:'#9AA1B2', opacity:.16}, roll));
+// 808 notes; the 2nd and 3rd overlap = slide (glide)
+const notes = [[0,6,36,110,false],[5,3,39,105,true],[10,6,36,110,true],[14,2,43,90,false]];
+notes.forEach(([s,l,p,v,sel], i) => {
+  el('rect', {x:s*STEP+1, y:rowOf(p)+1.5, width:l*STEP-2, height:ROW-3, rx:3, fill:'#3DD6C6', 'fill-opacity': .55 + .45*v/127, stroke: sel ? '#fff' : 'none', 'stroke-width':1.5}, roll);
+  el('rect', {x:(s+l)*STEP-6, y:rowOf(p)+3, width:3, height:ROW-6, rx:1, fill:'rgba(0,0,0,.35)'}, roll);  // resize handle
+  const t = el('text', {x:s*STEP+(i===1?15:5), y:rowOf(p)+11.5, 'font-size':8.5, 'font-weight':800, fill:'#0F1115', 'font-family':'Inter'}, roll);
+  t.textContent = ['C2','D#2','C2','G2'][i];
+});
+// slide marker (FL "slide note" triangle) on the D#2 note
+el('polygon', {points:`${5*STEP+2},${rowOf(39)+2} ${5*STEP+12},${rowOf(39)+8} ${5*STEP+2},${rowOf(39)+14}`, fill:'#F2B33D'}, roll);
+// selection marquee
+el('rect', {x:5*STEP-4, y:rowOf(39)-6, width:11*STEP+8, height:rowOf(36)-rowOf(39)+ROW+12, fill:'rgba(242,179,61,.06)', stroke:'#F2B33D', 'stroke-dasharray':'4 3'}, roll);
+// chord stamp preview hint
+const hint = el('text', {x:228, y:rowOf(55)+12, 'font-size':9, 'font-weight':700, fill:'#F2B33D', 'font-family':'Inter'}, roll); hint.textContent = '♫ stamp: Minor 7';
+// playhead
+el('line', {x1:8.5*STEP, y1:0, x2:8.5*STEP, y2:440, stroke:'#fff', 'stroke-width':1.5, opacity:.8}, roll);
+// velocity lane
+for (let s = 0; s <= 16; s++) el('line', {x1:40+s*STEP, y1:0, x2:40+s*STEP, y2:58, stroke:'#1E222B'}, vel);
+notes.forEach(([s,l,p,v,sel]) => { const h = v/127*50; el('rect', {x:40+s*STEP+1, y:56-h, width:3, height:h, fill: sel ? '#F2B33D' : '#3DD6C6'}, vel); el('circle', {cx:40+s*STEP+2.5, cy:56-h, r:3.5, fill: sel ? '#F2B33D' : '#3DD6C6'}, vel); });
+
+/* ---------- Mixer ---------- */
+const strips = document.getElementById('strips');
+[
+  { n:'Master', num:'M', c:'#F2B33D', lvl:.78, f:.72, master:true, fx:[1,1,0] },
+  { n:'Kick', num:'1', c:'#F2B33D', lvl:.7, f:.7, fx:[1,1,0] },
+  { n:'Snr/Clp', num:'2', c:'#E5484D', lvl:.55, f:.66, fx:[1,0,0] },
+  { n:'Hats', num:'3', c:'#3DD6C6', lvl:.42, f:.6, fx:[1,0,0] },
+  { n:'808', num:'4', c:'#3DD6C6', lvl:.82, f:.74, sel:true, fx:[1,1,0] },
+  { n:'Perc', num:'5', c:'#B57BFF', lvl:.3, f:.55, mute:true, fx:[0,0,0] },
+].forEach(s => {
+  const d = document.createElement('div'); d.className = 'strip' + (s.master ? ' master' : '') + (s.sel ? ' sel' : '');
+  d.innerHTML = `<span class="num">${s.num}</span><span class="cbar" style="background:${s.c}"></span><span class="snm">${s.n}</span>
+    <span class="fxdots">${s.fx.map(o => `<i class="${o?'on':''}"></i>`).join('')}</span>
+    <div class="knob" style="--a:0deg"></div>
+    <div class="fader-area"><div class="meter"><b style="height:${s.lvl*100}%"></b></div><div class="track"><span class="cap" style="bottom:${s.f*100}%"></span></div><div class="meter"><b style="height:${(s.lvl-.05)*100}%"></b></div></div>
+    <div class="ms"><span class="${s.mute?'m':''}">M</span><span>S</span></div>
+    <span class="route">${s.master ? 'OUT' : '→ M'}</span>`;
+  strips.appendChild(d);
+});
+const eq = document.getElementById('eq');
+for (let x = 0; x < 370; x += 46) el('line', {x1:x, y1:0, x2:x, y2:62, stroke:'#1E222B'}, eq);
+el('line', {x1:0, y1:31, x2:370, y2:31, stroke:'#2E3342'}, eq);
+el('path', {d:'M0 22 C 40 22, 60 18, 90 18 C 130 18, 150 31, 190 34 C 230 37, 250 42, 290 38 C 320 35, 340 52, 370 60', stroke:'#3DD6C6', 'stroke-width':2, fill:'none'}, eq);
+el('path', {d:'M0 22 C 40 22, 60 18, 90 18 C 130 18, 150 31, 190 34 C 230 37, 250 42, 290 38 C 320 35, 340 52, 370 60 L 370 62 L 0 62 Z', fill:'rgba(61,214,198,.1)'}, eq);
+[[90,18,'#F2B33D'],[200,35,'#E5484D'],[300,38,'#B57BFF']].forEach(([cx,cy,c]) => el('circle', {cx, cy, r:5, fill:c}, eq));
+</script>
+</body>
+</html>

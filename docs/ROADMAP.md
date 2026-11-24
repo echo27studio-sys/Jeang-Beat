@@ -11,6 +11,7 @@ Stack: Kotlin + Jetpack Compose for the UI, C++ + Google Oboe for audio.
 | M1 | Audio engine core: low-latency playback, sampler voices, tempo/swing clock, built-in drum kit | ✅ Done |
 | M2 | Beat making: step sequencer, 4×4 pads with note repeat and recording, patterns, save/load, undo | ✅ Done |
 | M3 | Melody: piano roll (scale lock, velocity), 808 bass with glide, synth | ✅ Done |
+| **2.0** | **Redesign (draft): Playlist · Pattern (FL rack + Ring) · Mixer, Piano Roll inside Pattern** — see [design/v2](design/v2/README.md). Phases 2.1–2.6 replace M4 below | Draft |
 | M4 | Song and mix: song arrangement timeline, mixer, core effects (EQ, compressor, reverb, delay, filter, distortion, limiter) | Next |
 | M5 | Easy mode and export: Quick Start loops (incl. Khmer Fusion), WAV/MP3 export, sharing → **first public APK (v0.1)** | |
 | M6+ | Vocal recording, sample chopper, automation, sidechain, chord generator, MIDI controllers, stems, tutorial | |
