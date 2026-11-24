@@ -27,6 +27,7 @@ fun Instrument.typeLabel(): Int = when (this) {
     is Instrument.Drum -> R.string.instrument_drum
     is Instrument.Bass808 -> R.string.instrument_808
     is Instrument.Synth -> R.string.instrument_synth
+    is Instrument.Sampler -> R.string.instrument_sampler
 }
 
 @StringRes

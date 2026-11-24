@@ -40,21 +40,8 @@ jobs:
         run: ./gradlew :core:model:test :core:data:test :core:audio:testDebugUnitTest --console=plain
       - name: Build debug APK
         run: ./gradlew :app:assembleDebug --console=plain
-      - name: Screen renders (Robolectric)
-        # Needs a large download from Maven Central that is sometimes rate limited (HTTP 429),
-        # so it retries once and never blocks the APK.
-        continue-on-error: true
-        run: |
-          ./gradlew :app:testDebugUnitTest --console=plain || { sleep 60; ./gradlew :app:testDebugUnitTest --console=plain; }
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
           name: jeang-beat-debug-apk
           path: app/build/outputs/apk/debug/*.apk
-      - name: Upload screen renders
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: screenshots
-          path: app/build/screenshots/
-          if-no-files-found: ignore

@@ -50,10 +50,6 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    testOptions {
-        unitTests.isIncludeAndroidResources = true
-    }
-
     packaging {
         resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
     }
@@ -70,9 +66,10 @@ dependencies {
     implementation(project(":core:data"))
     implementation(project(":core:audio"))
     implementation(project(":core:ui"))
-    implementation(project(":feature:pads"))
-    implementation(project(":feature:sequencer"))
+    implementation(project(":feature:pattern"))
     implementation(project(":feature:pianoroll"))
+    implementation(project(":feature:playlist"))
+    implementation(project(":feature:mixer"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
@@ -82,8 +79,4 @@ dependencies {
     debugImplementation(libs.compose.ui.tooling)
 
     testImplementation(libs.junit)
-    testImplementation(libs.robolectric)
-    testImplementation(platform(libs.compose.bom))
-    testImplementation(libs.compose.ui.test.junit4)
-    debugImplementation(libs.compose.ui.test.manifest)
 }

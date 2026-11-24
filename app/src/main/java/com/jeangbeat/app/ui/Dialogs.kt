@@ -43,6 +43,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.jeangbeat.app.StudioState
+import com.jeangbeat.app.io.ExportFormat
+import com.jeangbeat.core.audio.PlayMode
+import com.jeangbeat.core.model.AutomationTarget
+import com.jeangbeat.core.model.Project
+import androidx.compose.foundation.layout.height
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.RadioButton
 import com.jeangbeat.app.StudioViewModel
 import com.jeangbeat.core.model.Channel
 import com.jeangbeat.core.model.DrumSound
@@ -155,7 +162,7 @@ fun TextInputDialog(title: String, initial: String, onConfirm: (String) -> Unit,
 }
 
 @Composable
-fun AddChannelDialog(onAdd: (String, Instrument) -> Unit, onDismiss: () -> Unit) {
+fun AddChannelDialog(onAdd: (String, Instrument) -> Unit, onImport: () -> Unit, onDismiss: () -> Unit) {
     val drumOptions = DrumSound.entries.map { it to stringResource(it.label()) }
     val bassName = stringResource(R.string.instrument_808)
     val synthName = stringResource(R.string.instrument_synth)
@@ -169,6 +176,7 @@ fun AddChannelDialog(onAdd: (String, Instrument) -> Unit, onDismiss: () -> Unit)
                 item { SectionTitle(stringResource(R.string.instrument_808) + " / " + synthName) }
                 item { ChoiceRow(bassName) { onAdd("808", Instrument.Bass808()) } }
                 item { ChoiceRow(synthName) { onAdd(synthName, Instrument.Synth()) } }
+                item { ChoiceRow("＋ " + stringResource(R.string.import_audio) + " (" + stringResource(R.string.instrument_sampler) + ")") { onImport() } }
                 item { SectionTitle(stringResource(R.string.instrument_drum)) }
                 items(drumOptions) { (sound, name) ->
                     ChoiceRow(name) { onAdd(name.substringBefore(" ("), Instrument.Drum(sound)) }
@@ -198,7 +206,7 @@ private fun ChoiceRow(text: String, onClick: () -> Unit) {
 }
 
 @Composable
-fun ProjectsDialog(state: StudioState, viewModel: StudioViewModel, onDismiss: () -> Unit) {
+fun ProjectsDialog(state: StudioState, viewModel: StudioViewModel, files: FileActions, onDismiss: () -> Unit) {
     var nameDialog by remember { mutableStateOf<String?>(null) } // "new", "demo" or "saveas"
     var confirmDelete by remember { mutableStateOf<String?>(null) }
     val untitled = stringResource(R.string.untitled)
@@ -222,6 +230,8 @@ fun ProjectsDialog(state: StudioState, viewModel: StudioViewModel, onDismiss: ()
                     FilledTonalButton(onClick = { nameDialog = "new" }) { Text(stringResource(R.string.new_project)) }
                     FilledTonalButton(onClick = { nameDialog = "demo" }) { Text(stringResource(R.string.new_project_demo)) }
                     FilledTonalButton(onClick = { nameDialog = "saveas" }) { Text(stringResource(R.string.save_as)) }
+                    FilledTonalButton(onClick = { onDismiss(); files.importProject() }) { Text(stringResource(R.string.import_project)) }
+                    FilledTonalButton(onClick = { onDismiss(); files.exportProject() }) { Text(stringResource(R.string.export_project)) }
                 }
                 HorizontalDivider()
                 if (state.projects.isEmpty()) {
@@ -289,4 +299,85 @@ fun ProjectsDialog(state: StudioState, viewModel: StudioViewModel, onDismiss: ()
             dismissButton = { TextButton(onClick = { confirmDelete = null }) { Text(stringResource(R.string.cancel)) } },
         )
     }
+}
+
+
+@Composable
+fun ExportDialog(mode: PlayMode, onExport: (PlayMode, ExportFormat) -> Unit, onDismiss: () -> Unit) {
+    var what by remember { mutableStateOf(mode) }
+    var format by remember { mutableStateOf(ExportFormat.WAV16) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.export_audio)) },
+        text = {
+            Column {
+                Text(stringResource(R.string.export_what), style = MaterialTheme.typography.labelLarge, color = JbColors.TextDim)
+                listOf(PlayMode.SONG to R.string.export_song, PlayMode.PATTERN to R.string.export_pattern).forEach { (m, label) ->
+                    Row(Modifier.fillMaxWidth().clickable { what = m }.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(selected = what == m, onClick = { what = m })
+                        Text(stringResource(label))
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                Text(stringResource(R.string.format), style = MaterialTheme.typography.labelLarge, color = JbColors.TextDim)
+                listOf(
+                    ExportFormat.WAV16 to R.string.format_wav16,
+                    ExportFormat.WAV24 to R.string.format_wav24,
+                    ExportFormat.M4A to R.string.format_m4a,
+                    ExportFormat.STEMS to R.string.format_stems,
+                ).forEach { (f, label) ->
+                    Row(Modifier.fillMaxWidth().clickable { format = f }.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(selected = format == f, onClick = { format = f })
+                        Text(stringResource(label))
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = { onExport(what, format) }) { Text(stringResource(R.string.export_audio)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
+    )
+}
+
+@Composable
+fun ExportProgressDialog(progress: Float, onCancel: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = {},
+        title = { Text(stringResource(R.string.exporting, (progress * 100).toInt())) },
+        text = { LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth(), color = JbColors.Accent) },
+        confirmButton = { TextButton(onClick = onCancel) { Text(stringResource(R.string.cancel_export)) } },
+    )
+}
+
+/** Lists everything that can be automated: mixer volume/pan, channel volume/pan, effect knobs. */
+@Composable
+fun AutomationTargetDialog(project: Project, onPick: (AutomationTarget, Float) -> Unit, onDismiss: () -> Unit) {
+    val used = (project.channels.map { it.mixerTrack } + project.mixer.tracks.filter { it.effects.isNotEmpty() }.map { it.index } + 0).toSet()
+    val items = buildList {
+        project.mixer.tracks.filter { it.index in used }.forEach { t ->
+            add("${t.name} · ${stringResource(R.string.volume)}" to (AutomationTarget.MixerVolume(t.index) as AutomationTarget to t.volume))
+            add("${t.name} · ${stringResource(R.string.pan)}" to (AutomationTarget.MixerPan(t.index) as AutomationTarget to (t.pan + 1f) / 2f))
+            t.effects.forEach { slot ->
+                slot.type.params.forEachIndexed { i, spec ->
+                    if (!spec.stepped) add("${t.name} · ${slot.type.displayName} · ${spec.key}" to (AutomationTarget.EffectParam(t.index, slot.id, i) as AutomationTarget to spec.normalize(slot.param(i))))
+                }
+            }
+        }
+        project.channels.forEach { c ->
+            add("${c.name} · ${stringResource(R.string.volume)}" to (AutomationTarget.ChannelVolume(c.id) as AutomationTarget to c.volume))
+            add("${c.name} · ${stringResource(R.string.pan)}" to (AutomationTarget.ChannelPan(c.id) as AutomationTarget to (c.pan + 1f) / 2f))
+        }
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.add_automation)) },
+        text = {
+            LazyColumn(Modifier.heightIn(max = 420.dp)) {
+                items(items) { (label, target) ->
+                    Text(label, modifier = Modifier.fillMaxWidth().clickable { onPick(target.first, target.second) }.padding(vertical = 10.dp))
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
+    )
 }

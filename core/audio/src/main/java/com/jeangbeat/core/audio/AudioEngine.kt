@@ -80,6 +80,11 @@ class AudioEngine(private val realtime: Boolean = true) : AutoCloseable {
         loadedSamples -= id
     }
 
+    fun unloadAllSamples() = call { p ->
+        loadedSamples.forEach { native.nativeUnloadSample(p, it) }
+        loadedSamples.clear()
+    }
+
     // ---- Project ------------------------------------------------------------------
 
     /**

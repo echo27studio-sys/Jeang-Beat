@@ -97,6 +97,7 @@ fun ChannelSettingsSheet(channel: Channel, viewModel: StudioViewModel, onDismiss
                 is Instrument.Drum -> DrumParams(inst, ::updateInstrument, commit)
                 is Instrument.Bass808 -> BassParams(inst, ::updateInstrument, commit)
                 is Instrument.Synth -> SynthParams(inst, ::updateInstrument, commit)
+                is Instrument.Sampler -> SamplerParams(inst, viewModel.state.value.project.sample(inst.sampleId)?.name ?: "?", ::updateInstrument, commit)
             }
 
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
@@ -186,4 +187,13 @@ private fun SynthParams(inst: Instrument.Synth, update: InstrumentUpdate, commit
     ParamSlider(R.string.release, inst.release, { v -> set { it.copy(release = v) } }, 0.01f..4f, format = secs, onValueChangeFinished = commit)
     ParamSlider(R.string.detune, inst.detune, { v -> set { it.copy(detune = v) } }, 0f..50f,
         format = { "${it.roundToInt()} ct" }, onValueChangeFinished = commit)
+}
+
+@Composable
+private fun SamplerParams(inst: Instrument.Sampler, sampleName: String, update: InstrumentUpdate, commit: () -> Unit) {
+    Text(stringResource(R.string.instrument_sampler) + ": " + sampleName, style = MaterialTheme.typography.labelLarge)
+    ParamSlider(R.string.tune, inst.tune, { v -> update(false) { (it as Instrument.Sampler).copy(tune = v.roundToInt().toFloat()) } },
+        -24f..24f, format = { "%+d st".format(it.roundToInt()) }, onValueChangeFinished = commit)
+    ParamSlider(R.string.decay, inst.decay, { v -> update(false) { (it as Instrument.Sampler).copy(decay = v) } },
+        0.05f..1f, format = { "${(it * 100).roundToInt()}%" }, onValueChangeFinished = commit)
 }
