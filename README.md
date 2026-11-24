@@ -4,20 +4,21 @@ A free beat-making app for Android phones and tablets. The goal is to be **easie
 than FL Studio Mobile and just as professional**, with a Khmer identity: a
 bilingual interface (English / ខ្មែរ) and Khmer instruments.
 
-> Status: early development (milestones M0–M3 done). See [docs/ROADMAP.md](docs/ROADMAP.md).
+> Status: **2.0 in development**. See [docs/ROADMAP.md](docs/ROADMAP.md) and the [2.0 design](docs/design/v2/README.md).
 
-## What works today
+## What's in 2.0
+
+Three tabs, like FL Studio: **Playlist · Pattern · Mixer**. The transport has FL's **PAT / SONG** switch.
 
 | Area | Features |
 |---|---|
-| **Audio engine** | Native C++ engine on Google Oboe (low-latency AAudio), timing accurate to the sample, glitch-free live edits, soft limiter on the master |
-| **Step sequencer** | Channel rack with 16/32/64 steps, mute/solo, velocity editing by dragging, swing, playhead |
-| **Drum pads** | 4×4 multi-touch pads that fire on finger-down, note repeat (1/8, 1/16, 1/16T, 1/32), record into the pattern with latency compensation, keys mode for melodic playing |
-| **Piano roll** | Tap to add, tap to delete, drag to move, drag the end to resize, snap, scale lock (folds away off-scale rows), ghost notes from other instruments, velocity lane, zoom |
-| **Instruments** | 12 synthesised drum sounds (including Khmer *chhing* and *skor* placeholders), 808 bass with punch/drive and legato glide, 2-oscillator synth with resonant filter |
-| **Projects** | Multiple patterns per project, undo/redo, autosave, save as / open / delete, demo beat on first launch |
-| **Languages** | English and Khmer, switchable in the app |
-| **Screens** | Phone: bottom tabs (Pads / Steps / Piano Roll). Tablet or landscape: editor and pads side by side |
+| **Pattern** | FL Studio PC-style channel rack: mute LED (long-press = solo), pan/volume knobs, mixer track box, step buttons or a mini piano roll per channel, graph editor (velocity / pan / pitch), swing, 1–4 bar patterns in 4/4 or 12/8. **Ring** view: the pattern as shapes on a rhythm circle; tap to toggle, drag to rotate, Euclid with presets (tresillo, clave, bossa, 12/8 bell…) |
+| **Piano Roll** | Opens from a channel name. Tools: draw, paint, select, slice, delete, mute, slide notes. Quantize, transpose, duplicate, copy/paste, legato, flip, humanize, chord stamps, scale highlighting and lock, ghost notes, velocity / pan / fine pitch / release lanes. Two-finger scroll, pinch zoom |
+| **Playlist** | Tracks with pattern, audio and automation clips. Tools: draw, paint, select, slice, delete, mute. Song marker, loop region, make unique, automation point editor |
+| **Mixer** | Master + 24 inserts: fader, pan, stereo meters, mute/solo. 10 effect slots per track with mix knobs — **EQ** (live curve), **compressor** with **sidechain**, **limiter**, **reverb**, **tempo-synced delay**, **saturator**, **filter**. Sends between tracks (loops prevented). Long-press any fader or knob to automate it |
+| **Audio engine** | Native C++ on Google Oboe: sample-accurate song playback, mixer buses processed in routing order, effect tails survive edits, nothing allocated on the audio thread |
+| **Files** | Import audio (MP3, WAV, M4A, OGG, FLAC…) as a Playlist clip or a sampler instrument. Export WAV 16/24-bit, M4A (AAC) or stems (zip, one WAV per mixer track). Export / import whole projects as `.jbz` (with their samples). Autosave and undo/redo |
+| **Languages** | English and Khmer |
 
 ## Download
 
@@ -28,15 +29,18 @@ Releases page once a release key is set up — see [docs/RELEASING.md](docs/RELE
 ## Project structure
 
 ```
-app/                 App shell: StudioViewModel (state, undo, autosave), screens, dialogs
-core/model/          Pure Kotlin: project data, editing operations, scales, undo history
-core/data/           Saving/loading .jbeat project files (JSON)
-core/audio/          C++ audio engine (src/main/cpp) + Kotlin API (AudioEngine)
+app/                 App shell: StudioViewModel (state, undo, autosave), screens, dialogs,
+                     io/ (audio import via MediaCodec, WAV/M4A/stems export)
+core/model/          Pure Kotlin: project, patterns, playlist, mixer, editing operations, undo
+core/data/           .jbeat project files (JSON), .jbz bundles, WAV read/write
+core/audio/          C++ audio engine (src/main/cpp): sequencer, voices, mixer, effects
+                     + Kotlin API (AudioEngine, OfflineRenderer)
   native-tests/      Desktop tests for the C++ engine
-core/ui/             Theme, shared controls, English + Khmer strings
-feature/pads/        Drum pads / keys
-feature/sequencer/   Step sequencer (channel rack)
+core/ui/             Theme, knobs, faders, English + Khmer strings
+feature/pattern/     Channel rack, graph editor, Ring view
 feature/pianoroll/   Piano roll
+feature/playlist/    Playlist (song arrangement) and automation editor
+feature/mixer/       Mixer strips, effects, routing
 ```
 
 How it fits together: the UI edits an immutable `Project`. Every edit is pushed
@@ -49,7 +53,7 @@ locks or allocations on that thread.
 Requirements: JDK 17+, Android SDK (platform 36, NDK 28.2.13676358, CMake 3.31.6).
 
 ```bash
-./gradlew test                    # Kotlin unit tests + screen renders (app/build/screenshots)
+./gradlew :core:model:test :core:data:test :core:audio:testDebugUnitTest   # Kotlin unit tests
 ./gradlew :app:assembleDebug      # APK in app/build/outputs/apk/debug/
 ./core/audio/native-tests/run.sh  # C++ engine tests (needs cmake + ninja)
 ```
