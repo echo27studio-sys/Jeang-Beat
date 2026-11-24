@@ -19,45 +19,56 @@ void Voice::startFade(float seconds, float sampleRate) {
 
 void Voice::release() { releasing = true; }
 
-float Voice::render(const ChannelData& ch, float sampleRate) {
-    float out = 0.f;
+void Voice::render(const ChannelData& ch, float sampleRate, float& outL, float& outR) {
+    float l = 0.f, r = 0.f;
     switch (type) {
         case InstrumentType::Drum:
-            out = renderDrum(ch, sampleRate);
+        case InstrumentType::Sampler:
+            renderSample(ch, l, r);
             break;
         case InstrumentType::Bass808:
-            out = render808(ch, sampleRate);
+            l = r = render808(ch, sampleRate);
             break;
         case InstrumentType::Synth:
-            out = renderSynth(ch, sampleRate);
+            l = r = renderSynth(ch, sampleRate);
             break;
     }
     if (fadeStep > 0.f) {
         fade -= fadeStep;
         if (fade <= 0.f) {
             active = false;
-            return 0.f;
+            outL = outR = 0.f;
+            return;
         }
-        out *= fade;
+        l *= fade;
+        r *= fade;
     }
     time += 1.f / sampleRate;
-    return out;
+    outL = l * panL;
+    outR = r * panR;
 }
 
-float Voice::renderDrum(const ChannelData& ch, float sampleRate) {
-    (void)sampleRate;
-    if (buffer == nullptr) {
+void Voice::renderSample(const ChannelData& ch, float& outL, float& outR) {
+    if (buffer == nullptr || buffer->channels <= 0) {
         active = false;
-        return 0.f;
+        return;
     }
-    const auto size = static_cast<double>(buffer->data.size());
-    if (position >= size - 1.0) {
+    const auto frames = static_cast<double>(buffer->frames());
+    if (position >= frames - 1.0) {
         active = false;
-        return 0.f;
+        return;
     }
     const auto i = static_cast<size_t>(position);
     const auto frac = static_cast<float>(position - static_cast<double>(i));
-    const float s = buffer->data[i] + (buffer->data[i + 1] - buffer->data[i]) * frac;
+    const size_t c = static_cast<size_t>(buffer->channels);
+    const float* d = buffer->data.data();
+    const float a0 = d[i * c], a1 = d[(i + 1) * c];
+    float l = a0 + (a1 - a0) * frac;
+    float r = l;
+    if (c >= 2) {
+        const float b0 = d[i * c + 1], b1 = d[(i + 1) * c + 1];
+        r = b0 + (b1 - b0) * frac;
+    }
     position += rate;
 
     float amp = velocity;
@@ -66,16 +77,17 @@ float Voice::renderDrum(const ChannelData& ch, float sampleRate) {
         const float env = std::exp(-time / (decay * 0.6f));
         if (env < kSilence) {
             active = false;
-            return 0.f;
+            return;
         }
         amp *= env;
     }
-    return s * amp;
+    outL = l * amp;
+    outR = r * amp;
 }
 
 float Voice::render808(const ChannelData& ch, float sampleRate) {
-    const float glide = ch.params[bass_param::kGlide];
     if (freq != targetFreq) {
+        const float glide = slideSeconds > 0.f ? slideSeconds : ch.params[bass_param::kGlide];
         freq += (targetFreq - freq) * timeCoef(std::max(glide, 0.001f) * 0.35f, sampleRate);
     }
     const float punch = ch.params[bass_param::kPunch];
@@ -87,7 +99,7 @@ float Voice::render808(const ChannelData& ch, float sampleRate) {
     const float attack = std::min(1.f, time / 0.002f);
     const float body = std::exp(-time / decay);
     if (releasing) {
-        env *= 1.f - timeCoef(kBassReleaseSeconds, sampleRate);
+        env *= 1.f - timeCoef(kBassReleaseSeconds * releaseScale, sampleRate);
     }
     const float level = body * env;
     if (level < kSilence) {
@@ -106,7 +118,7 @@ float Voice::renderSynth(const ChannelData& ch, float sampleRate) {
     const float attack = std::max(0.001f, ch.params[synth_param::kAttack]);
     const float decay = std::max(0.005f, ch.params[synth_param::kDecay]);
     const float sustain = std::clamp(ch.params[synth_param::kSustain], 0.f, 1.f);
-    const float rel = std::max(0.005f, ch.params[synth_param::kRelease]);
+    const float rel = std::max(0.005f, ch.params[synth_param::kRelease] * releaseScale);
     if (releasing && envStage != 2) envStage = 2;
     switch (envStage) {
         case 0:
@@ -126,6 +138,9 @@ float Voice::renderSynth(const ChannelData& ch, float sampleRate) {
                 return 0.f;
             }
             break;
+    }
+    if (freq != targetFreq && slideSeconds > 0.f) {
+        freq += (targetFreq - freq) * timeCoef(slideSeconds * 0.35f, sampleRate);
     }
 
     // Oscillators

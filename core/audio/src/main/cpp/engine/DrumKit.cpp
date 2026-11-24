@@ -211,7 +211,10 @@ DrumKit::DrumKit() {
     auto set = [this](DrumSoundId id, std::vector<float> d) {
         normalize(d);
         fadeTail(d);
-        sounds_[static_cast<size_t>(id)].data = std::move(d);
+        auto& buf = sounds_[static_cast<size_t>(id)];
+        buf.data = std::move(d);
+        buf.channels = 1;
+        buf.sampleRate = static_cast<float>(kKitSampleRate);
     };
     set(DrumSoundId::Kick, kick());
     set(DrumSoundId::Snare, snare());

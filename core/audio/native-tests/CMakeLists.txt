@@ -12,6 +12,7 @@ add_executable(engine_test
     engine_test.cpp
     ${ENGINE_DIR}/DrumKit.cpp
     ${ENGINE_DIR}/Voice.cpp
+    ${ENGINE_DIR}/Effects.cpp
     ${ENGINE_DIR}/Engine.cpp)
 target_include_directories(engine_test PRIVATE ${ENGINE_DIR})
 target_compile_options(engine_test PRIVATE -O2 -Wall -Wextra -Werror -fsanitize=address,undefined)

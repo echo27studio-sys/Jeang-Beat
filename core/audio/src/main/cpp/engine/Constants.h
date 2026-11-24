@@ -12,7 +12,10 @@ constexpr int32_t kTicksPerStep = 24;
 // Built-in drum sounds are synthesised at this rate and resampled on playback.
 constexpr int32_t kKitSampleRate = 48000;
 
-constexpr int32_t kMaxVoices = 48;
+constexpr int32_t kMaxVoices = 64;
+// Mixer: index 0 = Master, 1..kMaxInserts-1 = inserts. Must match MIXER_INSERTS + 1 in Mixer.kt.
+constexpr int32_t kMaxInserts = 25;
+constexpr int32_t kMaxEffectSlots = 10;
 constexpr int32_t kMaxParams = 16;
 constexpr int32_t kMaxHeldPads = 16;
 constexpr int32_t kSubBlockFrames = 64;
@@ -23,6 +26,7 @@ enum class InstrumentType : int32_t {
     Drum = 0,
     Bass808 = 1,
     Synth = 2,
+    Sampler = 3,  // imported sample, uses the drum_param slots
 };
 
 // Parameter slots per instrument type. Must match ParamSlots in AudioEngine.kt.

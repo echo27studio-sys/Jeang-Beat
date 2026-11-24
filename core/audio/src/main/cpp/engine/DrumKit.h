@@ -23,7 +23,10 @@ enum class DrumSoundId : int32_t {
 };
 
 struct SampleBuffer {
-    std::vector<float> data;  // mono, kKitSampleRate
+    std::vector<float> data;  // interleaved, `channels` per frame
+    int32_t channels = 1;
+    float sampleRate = 48000.f;
+    size_t frames() const { return channels > 0 ? data.size() / static_cast<size_t>(channels) : 0; }
 };
 
 // Built-in drum sounds, synthesised once at start-up so the app ships without

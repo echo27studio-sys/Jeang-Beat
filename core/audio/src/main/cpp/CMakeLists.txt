@@ -9,6 +9,7 @@ find_package(oboe REQUIRED CONFIG)
 add_library(jeangbeat_audio SHARED
     engine/DrumKit.cpp
     engine/Voice.cpp
+    engine/Effects.cpp
     engine/Engine.cpp
     OboeHost.cpp
     jni_bridge.cpp)
