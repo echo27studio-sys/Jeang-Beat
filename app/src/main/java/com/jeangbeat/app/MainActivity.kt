@@ -41,8 +41,21 @@ class MainActivity : ComponentActivity(), FileActions {
         super.attachBaseContext(Settings.wrap(newBase))
     }
 
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putString(KEY_AUDIO_TARGET, audioTarget.name)
+        outState.putString(KEY_EXPORT_MODE, exportMode.name)
+        outState.putString(KEY_EXPORT_FORMAT, exportFormat.name)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // The system file picker can outlive this activity (e.g. rotation): restore what was asked for.
+        savedInstanceState?.let { b ->
+            b.getString(KEY_AUDIO_TARGET)?.let { audioTarget = AudioTarget.valueOf(it) }
+            b.getString(KEY_EXPORT_MODE)?.let { exportMode = PlayMode.valueOf(it) }
+            b.getString(KEY_EXPORT_FORMAT)?.let { exportFormat = ExportFormat.valueOf(it) }
+        }
         enableEdgeToEdge()
         viewModel.ensureProject(
             defaultName = getString(UiR.string.my_first_beat),
@@ -95,6 +108,12 @@ class MainActivity : ComponentActivity(), FileActions {
     override fun importProject() = openBundle.launch(arrayOf("*/*"))
 
     private fun startExport(uri: Uri) = viewModel.exportAudio(uri, exportMode, exportFormat)
+
+    private companion object {
+        const val KEY_AUDIO_TARGET = "audio_target"
+        const val KEY_EXPORT_MODE = "export_mode"
+        const val KEY_EXPORT_FORMAT = "export_format"
+    }
 
     private fun fileBase(): String = viewModel.state.value.project.name.replace(Regex("[\\\\/:*?\"<>|]"), "_").ifBlank { "Jeang Beat" }
 }

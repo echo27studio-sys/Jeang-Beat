@@ -17,7 +17,8 @@ import kotlin.math.roundToInt
 /** Decodes and encodes audio with the phone's built-in MediaCodec (no extra libraries). */
 object AudioCodec {
     private const val TIMEOUT_US = 10_000L
-    const val MAX_IMPORT_SECONDS = 10 * 60
+    /** Longer files would need too much memory as float PCM on a phone. */
+    const val MAX_IMPORT_SECONDS = 5 * 60
 
     /**
      * Decodes any audio file Android supports (MP3, WAV, AAC/M4A, OGG, FLAC…)
@@ -39,7 +40,11 @@ object AudioCodec {
             var sampleRate = format.getInteger(MediaFormat.KEY_SAMPLE_RATE)
             var channels = format.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
             var pcmFloat = false
-            val out = FloatList()
+            // Pre-size from the duration so the buffer doesn't keep doubling (and copying).
+            val durationUs = if (format.containsKey(MediaFormat.KEY_DURATION)) format.getLong(MediaFormat.KEY_DURATION) else 0L
+            if (durationUs > MAX_IMPORT_SECONDS * 1_000_000L) throw IOException("Audio longer than $MAX_IMPORT_SECONDS seconds")
+            val expected = (durationUs / 1_000_000.0 * sampleRate * channels).toLong().coerceIn(1L shl 16, Int.MAX_VALUE.toLong() / 2)
+            val out = FloatList((expected + expected / 50 + 4096).toInt())
             val info = MediaCodec.BufferInfo()
             var inputDone = false
             var outputDone = false
@@ -154,6 +159,14 @@ object AudioCodec {
             }
         }
 
+        /** Frees the codec and muxer without finishing the file (after an error). */
+        fun release() {
+            runCatching { codec.stop() }
+            runCatching { codec.release() }
+            runCatching { if (muxerStarted) muxer.stop() }
+            runCatching { muxer.release() }
+        }
+
         fun finish() {
             while (true) {
                 val inIndex = codec.dequeueInputBuffer(TIMEOUT_US)
@@ -198,15 +211,16 @@ object AudioCodec {
 }
 
 /** Growable float array without boxing. */
-private class FloatList {
-    private var data = FloatArray(1 shl 16)
+private class FloatList(initial: Int = 1 shl 16) {
+    private var data = FloatArray(initial)
     var size = 0
         private set
 
     fun add(v: Float) {
-        if (size == data.size) data = data.copyOf(data.size * 2)
+        if (size == data.size) data = data.copyOf(data.size + data.size / 2 + 4096)
         data[size++] = v
     }
 
-    fun toArray(): FloatArray = data.copyOf(size)
+    /** The data, without copying when the buffer is exactly full. */
+    fun toArray(): FloatArray = if (size == data.size) data else data.copyOf(size)
 }

@@ -289,11 +289,13 @@ fun KnobWithLabel(
 /** Mute LED used in the channel rack (green = on). */
 @Composable
 fun MuteLed(on: Boolean, solo: Boolean, onToggle: () -> Unit, onLongPress: () -> Unit, contentDescription: String) {
+    val toggle by rememberUpdatedState(onToggle)
+    val longPress by rememberUpdatedState(onLongPress)
     Box(
         Modifier
             .size(24.dp)
             .semantics { this.contentDescription = contentDescription }
-            .pointerInput(Unit) { detectTapGestures(onTap = { onToggle() }, onLongPress = { onLongPress() }) },
+            .pointerInput(Unit) { detectTapGestures(onTap = { toggle() }, onLongPress = { longPress() }) },
         contentAlignment = Alignment.Center,
     ) {
         Box(

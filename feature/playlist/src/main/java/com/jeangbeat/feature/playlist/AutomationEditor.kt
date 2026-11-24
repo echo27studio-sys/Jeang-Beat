@@ -37,7 +37,6 @@ import com.jeangbeat.core.model.Project
 import com.jeangbeat.core.model.Timing
 import com.jeangbeat.core.ui.JbColors
 import com.jeangbeat.core.ui.R
-import kotlin.math.abs
 import kotlin.math.roundToInt
 
 /**
@@ -99,9 +98,10 @@ fun AutomationEditorSheet(
                             // Drag: move the touched point (or add one and move it).
                             var index = hitIndex
                             if (index < 0) {
-                                points.add(AutoPoint(tickAt(down.position.x).coerceIn(0, c.lengthTicks), valueAt(down.position.y)))
+                                val added = AutoPoint(tickAt(down.position.x).coerceIn(0, c.lengthTicks), valueAt(down.position.y))
+                                points.add(added)
                                 points = points.sortedBy { it.tick }.toMutableList()
-                                index = points.indexOfFirst { abs(it.tick - tickAt(down.position.x)) == 0 }
+                                index = points.indexOfLast { it === added }
                             }
                             while (true) {
                                 val e = awaitPointerEvent()

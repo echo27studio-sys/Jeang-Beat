@@ -18,13 +18,17 @@ import kotlin.math.abs
 class SampleLibrary(private val context: Context) {
     val dir: File = File(context.filesDir, "samples").apply { mkdirs() }
 
-    /** Decodes [uri] and stores it. The returned ref has id 0; the project assigns the real id. */
-    fun import(uri: Uri): SampleRef {
+    /**
+     * Decodes [uri] and stores it. Returns the ref (id 0; the project assigns the real id)
+     * and the decoded audio, so callers don't read the file back.
+     */
+    fun import(uri: Uri): Pair<SampleRef, SampleData> {
         val audio = AudioCodec.decode(context, uri)
         val name = displayName(uri)?.substringBeforeLast('.')?.take(40) ?: "Audio"
         val fileName = "${UUID.randomUUID()}.wav"
         WavFile.write(File(dir, fileName), audio, bits = 24)
-        return SampleRef(0, name, fileName, audio.frames.toLong(), audio.sampleRate, audio.channels)
+        val ref = SampleRef(0, name, fileName, audio.frames.toLong(), audio.sampleRate, audio.channels)
+        return ref to SampleData(audio.samples, audio.channels, audio.sampleRate)
     }
 
     fun load(ref: SampleRef): SampleData? = runCatching {

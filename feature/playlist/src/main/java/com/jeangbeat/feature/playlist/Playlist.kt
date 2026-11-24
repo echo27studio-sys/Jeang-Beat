@@ -182,7 +182,7 @@ fun Playlist(
         // ---- tracks ----
         Row(Modifier.weight(1f).fillMaxWidth()) {
             Column(Modifier.width(HEADER_WIDTH).fillMaxHeight().verticalScroll(vScroll)) {
-                song.tracks.forEach { t -> TrackHeader(t, actions) }
+                song.tracks.forEach { t -> androidx.compose.runtime.key(t.id) { TrackHeader(t, actions) } }
                 Box(
                     Modifier.width(HEADER_WIDTH).height(TRACK_HEIGHT).clickable(onClick = actions::addTrack),
                     contentAlignment = Alignment.Center,
@@ -496,7 +496,9 @@ private fun Lanes(
                             is ClipGesture.Paint -> {
                                 val len = cur.project.pattern(cur.paintPatternId)?.lengthTicks ?: Timing.TICKS_PER_BAR
                                 val slot = floor(tickAt(p).toDouble() / len).toInt() * len
-                                if (g.placed.add(slot) && cur.hit(Offset(slot * cur.tickPx + 2f, p.y)) == null) {
+                                val row = cur.tracks.indexOfFirst { it.id == g.trackId }
+                                val rowY = (row + 0.5f) * cur.trackPx
+                                if (g.placed.add(slot) && cur.hit(Offset(slot * cur.tickPx + 2f, rowY)) == null) {
                                     actions.addPatternClip(g.trackId, slot, cur.paintPatternId, final = false)
                                 }
                             }
@@ -508,7 +510,11 @@ private fun Lanes(
                             }
                         }
                     }
-                    if (twoFinger) return@awaitEachGesture
+                    if (twoFinger) {
+                        // Close any edit started before the second finger landed (erase on touch-down, paint).
+                        actions.deleteClip(-1, final = true)
+                        return@awaitEachGesture
+                    }
                     val s2 = st.value
                     when (val g = gesture) {
                         is ClipGesture.Move -> if (moved) actions.moveClip(g.clip.id, s2.project.song.clip(g.clip.id)?.startTick ?: g.clip.startTick, s2.project.song.clip(g.clip.id)?.trackId ?: g.clip.trackId, final = true)

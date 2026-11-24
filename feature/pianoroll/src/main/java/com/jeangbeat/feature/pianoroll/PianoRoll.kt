@@ -260,7 +260,7 @@ fun PianoRoll(
             Box(Modifier.width(KEYBOARD_WIDTH).fillMaxHeight().verticalScroll(vScroll)) {
                 val keyboardHeight = with(density) { (rows.size * rowPx).toDp() }
                 Canvas(
-                    Modifier.size(KEYBOARD_WIDTH, keyboardHeight).pointerInput(rows, rowPx) {
+                    Modifier.size(KEYBOARD_WIDTH, keyboardHeight).pointerInput(rows, rowPx, actions) {
                         awaitEachGesture {
                             val down = awaitFirstDown()
                             rows.getOrNull((down.position.y / rowPx).toInt())?.let(actions::previewNote)
@@ -362,8 +362,17 @@ private fun visibleRows(scale: ScaleSetting, notes: List<Note>): List<Int> {
 private sealed interface Gesture {
     data object None : Gesture
     data object Pan : Gesture
-    data class Move(val originals: List<Note>, val anchorTick: Int, val anchorRow: Int) : Gesture
-    data class Resize(val originals: List<Note>) : Gesture
+    /** [base] = all notes when the gesture began; every drag frame is computed from it, never chained. */
+    data class Move(
+        val originals: List<Note>,
+        val anchorTick: Int,
+        val anchorRow: Int,
+        val base: List<Note>,
+        val rows: List<Int>,
+        val rowOf: Map<Int, Int>,
+        val wasSelected: Boolean,
+    ) : Gesture
+    data class Resize(val originals: List<Note>, val base: List<Note>, val wasSelected: Boolean) : Gesture
     data class Paint(val pitch: Int, val painted: MutableSet<Int>) : Gesture
     data class Marquee(val start: Offset) : Gesture
     data object Erase : Gesture
@@ -405,7 +414,7 @@ private fun RollGrid(
 
     Box(
         modifier
-            .pointerInput(Unit) {
+            .pointerInput(channel.id, pattern.id, actions) {
                 awaitEachGesture {
                     val down = awaitFirstDown()
                     val s = st.value
@@ -419,7 +428,12 @@ private fun RollGrid(
                         hit != null && (s.tool == RollTool.DRAW || s.tool == RollTool.SLIDE || s.tool == RollTool.SELECT) -> {
                             val (note, edge) = hit
                             val group = if (note.key in s.selection) s.notes.filter { it.key in s.selection } else listOf(note)
-                            if (edge && s.tool != RollTool.SELECT) Gesture.Resize(group) else Gesture.Move(group, tickAt(start), s.rowIndex(start.y))
+                            val wasSelected = note.key in s.selection
+                            if (edge && s.tool != RollTool.SELECT) {
+                                Gesture.Resize(group, s.notes, wasSelected)
+                            } else {
+                                Gesture.Move(group, tickAt(start), s.rowIndex(start.y), s.notes, s.rows, s.rowOf, wasSelected)
+                            }
                         }
                         s.tool == RollTool.PAINT && hit == null -> s.rows.getOrNull(s.rowIndex(start.y))?.let { Gesture.Paint(it, mutableSetOf()) } ?: Gesture.None
                         s.tool == RollTool.SELECT -> Gesture.Marquee(start)
@@ -475,15 +489,15 @@ private fun RollGrid(
                         when (val g = gesture) {
                             is Gesture.Move -> {
                                 val dt = Timing.quantize(tickAt(p) - g.anchorTick, cur.snap.ticks)
-                                val dr = cur.rowIndex(p.y) - g.anchorRow
+                                // Rows are taken from the gesture start so folded (scale-lock) rows don't shift mid-drag.
+                                val dr = ((p.y / cur.rowPx).toInt().coerceIn(0, g.rows.lastIndex.coerceAtLeast(0))) - g.anchorRow
                                 val moved2 = g.originals.map { n ->
-                                    val row = (cur.rowOf[n.pitch] ?: 0) + dr
-                                    val pitch = cur.rows.getOrNull(row.coerceIn(0, cur.rows.lastIndex)) ?: n.pitch
+                                    val row = (g.rowOf[n.pitch] ?: g.anchorRow) + dr
+                                    val pitch = g.rows.getOrNull(row.coerceIn(0, g.rows.lastIndex)) ?: n.pitch
                                     val maxStart = (cur.pattern.lengthTicks - n.lengthTicks).coerceAtLeast(0)
                                     n.copy(startTick = (n.startTick + dt).coerceIn(0, maxStart), pitch = pitch)
                                 }
-                                val prev = lastMoved.ifEmpty { g.originals }
-                                actions.editNotes(false) { list -> list.filterNot { it in prev } + moved2 }
+                                actions.editNotes(false) { _ -> g.base.filterNot { it in g.originals } + moved2 }
                                 lastMoved = moved2
                             }
                             is Gesture.Resize -> {
@@ -491,10 +505,11 @@ private fun RollGrid(
                                 val end = Timing.quantize(tickAt(p) + 1, cur.snap.ticks)
                                 val delta = end - first.endTick
                                 val resized = g.originals.map { n ->
-                                    n.copy(lengthTicks = (n.lengthTicks + delta).coerceIn(cur.snap.ticks.coerceAtMost(cur.pattern.stepTicks), cur.pattern.lengthTicks - n.startTick))
+                                    val maxLen = (cur.pattern.lengthTicks - n.startTick).coerceAtLeast(1)
+                                    val minLen = minOf(cur.snap.ticks.coerceAtMost(cur.pattern.stepTicks), maxLen)
+                                    n.copy(lengthTicks = (n.lengthTicks + delta).coerceIn(minLen, maxLen))
                                 }
-                                val prev = lastMoved.ifEmpty { g.originals }
-                                actions.editNotes(false) { list -> list.filterNot { it in prev } + resized }
+                                actions.editNotes(false) { _ -> g.base.filterNot { it in g.originals } + resized }
                                 lastMoved = resized
                             }
                             is Gesture.Paint -> {
@@ -519,11 +534,12 @@ private fun RollGrid(
                         is Gesture.Move -> if (moved) {
                             actions.editNotes(true) { it }
                             // A moved selection stays selected so it can be moved again.
-                            if (g.originals.any { it.key in s2.selection }) onSelection(lastMoved.map { it.key }.toSet())
+                            if (g.wasSelected) onSelection(lastMoved.map { it.key }.toSet())
                         }
                         is Gesture.Resize -> if (moved) {
                             actions.editNotes(true) { it }
                             lastMoved.firstOrNull()?.let { onNewLength(it.lengthTicks) }
+                            if (g.wasSelected) onSelection(lastMoved.map { it.key }.toSet())
                         }
                         is Gesture.Paint -> if (moved) actions.editNotes(true) { it } else {
                             val t = snapFloor(tickAt(start))
@@ -722,7 +738,7 @@ private fun PropertyLane(
         Box(
             Modifier
                 .fillMaxSize()
-                .pointerInput(tickPx) {
+                .pointerInput(tickPx, channel.id, pattern.id, actions) {
                     awaitEachGesture {
                         val down = awaitFirstDown()
                         down.consume()

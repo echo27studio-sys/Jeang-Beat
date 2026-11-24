@@ -357,6 +357,8 @@ private fun GraphEditor(
                                     apply(c.position.x, c.position.y, false)
                                 }
                                 apply(last.x, last.y, true)
+                                // Always close the gesture (the finger may lift over an empty step).
+                                actions.updateStepNote(currentChannel.id, lastStep.coerceAtLeast(0), true) { it }
                             }
                         },
                 ) {

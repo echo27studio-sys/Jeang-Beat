@@ -125,6 +125,7 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
     private val history = UndoHistory(DefaultProjects.empty("…"))
     private var gestureBase: Project? = null
     private var saveJob: Job? = null
+    private var sampleJob: Job? = null
     private var exportCancel = AtomicBoolean(false)
     private var initialised = false
     private var clipboard: List<Note> = emptyList()
@@ -253,15 +254,18 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
 
     /** Loads the project's audio files into the engine (off the main thread) and builds waveforms. */
     private fun loadSamples(p: Project) {
-        viewModelScope.launch {
+        // A previous project's loader must not keep loading into this project (ids are per project).
+        sampleJob?.cancel()
+        val fileName = _state.value.fileName
+        sampleJob = viewModelScope.launch {
             val waves = HashMap<Int, FloatArray>()
-            withContext(Dispatchers.IO) {
-                for (ref in p.samples) {
-                    val data = samples.load(ref) ?: continue
-                    engine.loadSample(ref.id, data.samples, data.channels, data.sampleRate)
-                    waves[ref.id] = samples.peaks(data)
-                }
+            for (ref in p.samples) {
+                val data = withContext(Dispatchers.IO) { samples.load(ref) } ?: continue
+                if (_state.value.fileName != fileName) return@launch
+                engine.loadSample(ref.id, data.samples, data.channels, data.sampleRate)
+                waves[ref.id] = withContext(Dispatchers.Default) { samples.peaks(data) }
             }
+            if (_state.value.fileName != fileName) return@launch
             _state.update { it.copy(waveforms = it.waveforms + waves) }
             pushToEngine()
         }
@@ -516,19 +520,9 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
     fun importAudio(uri: Uri, target: AudioTarget) {
         _state.update { it.copy(busy = true) }
         viewModelScope.launch {
-            val result = withContext(Dispatchers.IO) {
-                runCatching {
-                    val ref = samples.import(uri)
-                    val data = samples.load(ref)
-                    ref to data
-                }
-            }
+            val result = withContext(Dispatchers.IO) { runCatching { samples.import(uri) } }
             _state.update { it.copy(busy = false) }
             val (ref, data) = result.getOrElse {
-                message(UiR.string.import_failed)
-                return@launch
-            }
-            if (data == null) {
                 message(UiR.string.import_failed)
                 return@launch
             }

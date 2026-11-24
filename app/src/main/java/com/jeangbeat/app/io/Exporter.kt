@@ -21,7 +21,30 @@ enum class ExportFormat(val mime: String, val extension: String) {
 /** Renders a project offline and writes it to a document the user picked. */
 class Exporter(private val context: Context, private val samples: SampleLibrary) {
 
+    /** Renders and writes the file. On failure or cancel the partial document is deleted. */
     fun exportAudio(
+        project: Project,
+        mode: PlayMode,
+        format: ExportFormat,
+        uri: Uri,
+        isCancelled: () -> Boolean,
+        onProgress: (Float) -> Unit,
+    ): Boolean {
+        val ok = try {
+            write(project, mode, format, uri, isCancelled, onProgress)
+        } catch (e: Exception) {
+            deletePartial(uri)
+            throw e
+        }
+        if (!ok) deletePartial(uri)
+        return ok
+    }
+
+    private fun deletePartial(uri: Uri) {
+        runCatching { android.provider.DocumentsContract.deleteDocument(context.contentResolver, uri) }
+    }
+
+    private fun write(
         project: Project,
         mode: PlayMode,
         format: ExportFormat,
@@ -44,9 +67,15 @@ class Exporter(private val context: Context, private val samples: SampleLibrary)
                 val pfd = context.contentResolver.openFileDescriptor(uri, "rw") ?: throw IOException("Cannot open output")
                 pfd.use {
                     val aac = AudioCodec.AacWriter(it.fileDescriptor, rate)
-                    val ok = renderer.render(mode, rate, -1, TAIL, isCancelled, onProgress) { buf, n -> aac.write(buf, n) }
-                    aac.finish()
-                    ok
+                    var finished = false
+                    try {
+                        val ok = renderer.render(mode, rate, -1, TAIL, isCancelled, onProgress) { buf, n -> aac.write(buf, n) }
+                        aac.finish()
+                        finished = true
+                        ok
+                    } finally {
+                        if (!finished) aac.release()
+                    }
                 }
             }
             ExportFormat.STEMS -> openOut(uri).use { out ->
