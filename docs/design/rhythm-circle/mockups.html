@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rhythm Circle Mockups</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Kantumruy+Pro:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  /* Draft UI for the Jeang Beat "Rhythm Circle" pattern view. Rendered to PNG with Playwright. */
+  :root {
+    --bg: #0F1115; --surface: #181B22; --raised: #222632; --outline: #2E3342;
+    --grid: #262A36; --step-off: #2A2F3C; --text: #E8EAF0; --dim: #9AA1B2; --faint: #5C6375;
+    --gold: #F2B33D; --red: #E5484D; --teal: #3DD6C6; --blue: #5B8CFF; --purple: #B57BFF;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #05060A; font-family: Inter, "Kantumruy Pro", sans-serif; color: var(--text); padding: 24px; display: flex; gap: 24px; flex-wrap: wrap; }
+  .km { font-family: "Kantumruy Pro", Inter, sans-serif; }
+  .phone { width: 390px; height: 844px; background: var(--bg); border-radius: 36px; overflow: hidden; position: relative; display: flex; flex-direction: column; border: 1px solid #1d2029; }
+  .status { height: 34px; display: flex; justify-content: space-between; align-items: center; padding: 0 26px; font-size: 13px; font-weight: 600; }
+  /* transport bar */
+  .transport { background: var(--surface); padding: 8px 12px; display: flex; align-items: center; gap: 8px; }
+  .play { width: 42px; height: 42px; border-radius: 50%; background: var(--text); display: grid; place-items: center; }
+  .play i { width: 13px; height: 13px; background: #000; border-radius: 2px; }
+  .rec { width: 14px; height: 14px; border-radius: 50%; background: var(--red); margin: 0 6px; }
+  .chip { background: var(--raised); border-radius: 8px; padding: 8px 10px; font-size: 13px; font-weight: 700; white-space: nowrap; }
+  .icon { color: var(--dim); font-size: 18px; width: 26px; text-align: center; }
+  /* view switch row */
+  .viewbar { display: flex; align-items: center; gap: 8px; padding: 10px 14px 4px; }
+  .seg { display: flex; background: var(--step-off); border-radius: 9px; padding: 2px; }
+  .seg span { padding: 6px 12px; font-size: 12px; font-weight: 600; border-radius: 8px; color: var(--text); }
+  .seg span.on { background: var(--gold); color: #1a1400; }
+  .btn-ghost { margin-left: auto; font-size: 12px; font-weight: 700; color: var(--gold); border: 1px solid #4a3a16; border-radius: 9px; padding: 6px 10px; }
+  /* header block, like the reference */
+  .head { padding: 8px 18px 0; }
+  .kicker { font-size: 11px; font-weight: 800; letter-spacing: .06em; color: var(--text); }
+  .sub { font-size: 10px; font-weight: 600; color: var(--dim); letter-spacing: .03em; margin-top: 2px; }
+  .titlerow { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+  .badge { width: 32px; height: 32px; border-radius: 6px; background: var(--gold); color: #1a1400; font-weight: 900; font-size: 20px; display: grid; place-items: center; }
+  .title { font-size: 26px; font-weight: 900; letter-spacing: -.01em; }
+  .meta { font-size: 11px; color: var(--dim); font-weight: 600; letter-spacing: .05em; margin-top: 6px; }
+  .circle-wrap { display: flex; justify-content: center; margin-top: 4px; }
+  /* legend */
+  .legend { display: flex; gap: 6px; padding: 2px 14px 8px; flex-wrap: wrap; justify-content: center; }
+  .lg { display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; padding: 4px 8px; border-radius: 20px; background: var(--surface); color: var(--dim); }
+  .lg b { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .lg.on { color: var(--text); background: var(--raised); }
+  .lg.sel { outline: 1.5px solid var(--gold); color: var(--text); }
+  /* mini grid */
+  .mgrid { padding: 0 14px; }
+  .mrow { display: flex; align-items: center; gap: 3px; margin-bottom: 4px; }
+  .mrow .nm { width: 62px; font-size: 10px; font-weight: 800; letter-spacing: .04em; }
+  .cell { width: 17px; height: 17px; border-radius: 3px; background: #1C2029; }
+  .cell.beat { background: #232836; }
+  .cell.on { background: #C9CCD4; }
+  .cell.now { outline: 1.5px solid #fff; outline-offset: 0; }
+  .gap { width: 3px; }
+  .stepinfo { display: flex; justify-content: space-between; align-items: center; padding: 4px 14px 0; font-size: 10px; font-weight: 700; color: var(--dim); letter-spacing: .05em; }
+  .dots { display: flex; gap: 4px; }
+  .dots i { width: 14px; height: 4px; border-radius: 2px; background: #3a3f4d; }
+  .dots i.on { background: var(--gold); }
+  /* bottom nav */
+  .nav { margin-top: auto; background: var(--surface); height: 74px; display: flex; justify-content: space-around; align-items: center; padding-bottom: 10px; }
+  .nav div { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; color: var(--dim); font-weight: 600; }
+  .nav div .ic { width: 52px; height: 28px; border-radius: 14px; display: grid; place-items: center; font-size: 15px; }
+  .nav div.on { color: var(--text); }
+  .nav div.on .ic { background: rgba(242,179,61,.28); }
+  /* sheet */
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--surface); border-radius: 22px 22px 0 0; padding: 10px 18px 26px; box-shadow: 0 -12px 40px rgba(0,0,0,.6); }
+  .grab { width: 36px; height: 4px; border-radius: 2px; background: #3a3f4d; margin: 0 auto 12px; }
+  .sh-title { font-size: 15px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+  .sh-row { display: flex; align-items: center; gap: 10px; margin-top: 14px; }
+  .sh-row label { width: 70px; font-size: 12px; font-weight: 600; color: var(--dim); }
+  .stepper { display: flex; align-items: center; background: var(--raised); border-radius: 10px; }
+  .stepper span { padding: 8px 14px; font-weight: 800; font-size: 15px; }
+  .stepper span.pm { color: var(--gold); font-size: 18px; padding: 6px 12px; }
+  .pills { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 14px; }
+  .pill { font-size: 11px; font-weight: 700; padding: 6px 10px; border-radius: 20px; background: var(--raised); }
+  .pill.on { background: var(--gold); color: #1a1400; }
+  .cta { margin-top: 16px; display: flex; gap: 8px; }
+  .cta div { flex: 1; text-align: center; padding: 12px; border-radius: 12px; font-weight: 800; font-size: 13px; }
+  .primary { background: var(--gold); color: #1a1400; }
+  .secondary { background: var(--raised); }
+  .hint { font-size: 11px; color: var(--dim); margin-top: 10px; line-height: 1.4; }
+  /* library */
+  .search { margin: 10px 14px 0; background: var(--surface); border-radius: 12px; padding: 11px 14px; font-size: 13px; color: var(--faint); }
+  .chips { display: flex; gap: 6px; padding: 10px 14px; overflow: hidden; }
+  .chips span { font-size: 12px; font-weight: 700; padding: 7px 11px; border-radius: 20px; background: var(--surface); white-space: nowrap; color: var(--dim); }
+  .chips span.on { background: var(--gold); color: #1a1400; }
+  .section { font-size: 11px; font-weight: 800; letter-spacing: .08em; color: var(--dim); padding: 6px 16px 6px; display: flex; justify-content: space-between; }
+  .card { margin: 0 14px 8px; background: var(--surface); border-radius: 14px; padding: 10px; display: flex; gap: 12px; align-items: center; }
+  .card.playing { outline: 1.5px solid var(--gold); }
+  .card .info { flex: 1; min-width: 0; }
+  .card .nm { font-size: 15px; font-weight: 800; }
+  .card .nm .km { font-weight: 600; font-size: 13px; color: var(--dim); margin-left: 6px; }
+  .card .mt { font-size: 11px; color: var(--dim); font-weight: 600; margin-top: 3px; }
+  .tag { display: inline-block; font-size: 9px; font-weight: 800; letter-spacing: .06em; padding: 2px 6px; border-radius: 4px; background: #3a2c10; color: var(--gold); margin-top: 5px; }
+  .tag.v { background: #123a35; color: var(--teal); }
+  .card .use { font-size: 12px; font-weight: 800; color: var(--gold); padding: 8px 10px; border-radius: 10px; background: var(--raised); }
+  .card .pbtn { width: 34px; height: 34px; border-radius: 50%; background: var(--raised); display: grid; place-items: center; font-size: 12px; }
+  /* story mode */
+  .story-bars { display: flex; gap: 4px; padding: 6px 14px 0; }
+  .story-bars i { flex: 1; height: 3px; border-radius: 2px; background: #3a3f4d; }
+  .story-bars i.done { background: var(--text); }
+  .story-bars i.cur { background: linear-gradient(90deg, var(--text) 55%, #3a3f4d 55%); }
+  .story-top { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px 0; font-size: 12px; font-weight: 800; }
+  .story-top .brand b { color: var(--gold); }
+  .caption { margin: 8px 14px 0; border-left: 3px solid var(--gold); background: var(--surface); border-radius: 8px; padding: 10px 12px; }
+  .caption .l1 { font-size: 12px; font-weight: 800; }
+  .caption .l2 { font-size: 12px; color: var(--dim); margin-top: 3px; }
+  .label { position: absolute; top: 40px; right: 16px; font-size: 10px; font-weight: 800; letter-spacing: .1em; color: var(--faint); }
+</style>
+</head>
+<body>
+
+<!-- ============ SCREEN 1: Circle view while playing ============ -->
+<div class="phone" id="s1">
+  <div class="status"><span>11:52</span><span>▮▮▮ 83%</span></div>
+  <div class="transport">
+    <div class="play"><i></i></div><div class="rec"></div>
+    <div class="chip">140 BPM</div><div class="chip">Pattern 1 ▾</div>
+    <div class="icon">↶</div><div class="icon">↷</div><div class="icon" style="margin-left:auto">⋮</div>
+  </div>
+  <div class="viewbar">
+    <div class="seg"><span>Grid</span><span class="on">◯ Circle</span></div>
+    <div class="btn-ghost">♫ Rhythm Library</div>
+  </div>
+  <div class="head">
+    <div class="kicker">MY FIRST BEAT</div>
+    <div class="sub">KICK ON 1, 8, 11 · SNARE ON 9 · HATS IN 8THS + ROLL</div>
+    <div class="titlerow"><div class="badge">1</div><div class="title">TRAP BOUNCE</div></div>
+    <div class="meta">C MINOR · 140 BPM · 16 STEPS · 4/4</div>
+  </div>
+  <div class="circle-wrap"><svg id="c1" width="330" height="330"></svg></div>
+  <div class="legend">
+    <span class="lg on"><b style="background:var(--gold)"></b>Kick</span>
+    <span class="lg on"><b style="background:var(--red)"></b>Snare</span>
+    <span class="lg on"><b style="background:#fff"></b>Hi-Hat</span>
+    <span class="lg"><b style="background:var(--purple)"></b>Chhing</span>
+    <span class="lg"><b style="background:var(--teal)"></b>808</span>
+  </div>
+  <div class="mgrid" id="g1"></div>
+  <div class="stepinfo"><span>STEP 9 / 16</span><span class="dots"><i class="on"></i><i></i><i></i><i></i></span></div>
+  <div class="nav">
+    <div><span class="ic">▦</span>Pads</div><div class="on"><span class="ic">◯</span>Steps</div><div><span class="ic">♪</span>Piano Roll</div>
+  </div>
+</div>
+
+<!-- ============ SCREEN 2: Editing a ring (Euclid + rotate) ============ -->
+<div class="phone" id="s2">
+  <div class="status"><span>11:53</span><span>▮▮▮ 83%</span></div>
+  <div class="transport">
+    <div class="play" style="background:var(--gold)"><i style="width:0;height:0;border-left:12px solid #000;border-top:8px solid transparent;border-bottom:8px solid transparent;background:none;border-radius:0;margin-left:3px"></i></div><div class="rec" style="background:#5C6375"></div>
+    <div class="chip">105 BPM</div><div class="chip">Pattern 2 ▾</div>
+    <div class="icon">↶</div><div class="icon">↷</div><div class="icon" style="margin-left:auto">⋮</div>
+  </div>
+  <div class="viewbar">
+    <div class="seg"><span>Grid</span><span class="on">◯ Circle</span></div>
+    <div class="btn-ghost">♫ Rhythm Library</div>
+  </div>
+  <div class="head">
+    <div class="sub">EDITING · PERC · TAP A DOT TO ADD / REMOVE · DRAG RING TO ROTATE</div>
+    <div class="titlerow"><div class="badge" style="background:var(--purple)">P</div><div class="title">PERC RING</div></div>
+  </div>
+  <div class="circle-wrap"><svg id="c2" width="330" height="330"></svg></div>
+  <div class="sheet">
+    <div class="grab"></div>
+    <div class="sh-title"><span style="color:var(--purple)">●</span> Euclid &amp; Rotate — Perc</div>
+    <div class="sh-row"><label>Hits</label><div class="stepper"><span class="pm">−</span><span>5</span><span class="pm">+</span></div>
+      <label style="width:auto;margin-left:8px">Rotate</label><div class="stepper"><span class="pm">◀</span><span>0</span><span class="pm">▶</span></div></div>
+    <div class="pills">
+      <span class="pill">Tresillo 3:8</span><span class="pill on">Clave 3-2</span><span class="pill">Cinquillo 5:8</span><span class="pill">Bossa 5:16</span><span class="pill">3+3+2</span>
+    </div>
+    <div class="hint">Euclid spreads hits as evenly as possible around the circle. Many world rhythms (clave, tresillo, cinquillo) are Euclidean patterns rotated.</div>
+    <div class="cta"><div class="secondary">Clear ring</div><div class="primary">Apply</div></div>
+  </div>
+</div>
+
+<!-- ============ SCREEN 3: Rhythm Library ============ -->
+<div class="phone" id="s3">
+  <div class="status"><span>11:54</span><span>▮▮▮ 82%</span></div>
+  <div class="transport" style="justify-content:space-between">
+    <div style="font-size:18px">←</div><div style="font-weight:800;font-size:16px">Rhythm Library <span class="km" style="color:var(--dim);font-weight:600;font-size:13px">· បណ្ណាល័យចង្វាក់</span></div><div style="width:18px"></div>
+  </div>
+  <div class="search">⌕  Search rhythms, regions, styles…</div>
+  <div class="chips"><span class="on km">ខ្មែរ Khmer</span><span>Africa</span><span>Latin</span><span>Hip-hop</span><span>Afro</span><span>12/8</span></div>
+  <div class="section"><span>KHMER · ចង្វាក់ខ្មែរ</span><span style="color:var(--gold)">See all</span></div>
+  <div class="card playing"><svg class="mini" data-r="romvong" width="64" height="64"></svg>
+    <div class="info"><div class="nm">Romvong<span class="km">រាំវង់</span></div><div class="mt">Cambodia · Social dance · 16 steps</div><span class="tag">DRAFT · VERIFY WITH MUSICIANS</span></div>
+    <div class="pbtn" style="background:var(--gold);color:#000">■</div></div>
+  <div class="card"><svg class="mini" data-r="saravan" width="64" height="64"></svg>
+    <div class="info"><div class="nm">Saravan<span class="km">សារ៉ាវ៉ាន់</span></div><div class="mt">Cambodia · Dance · 16 steps</div><span class="tag">DRAFT · VERIFY WITH MUSICIANS</span></div>
+    <div class="pbtn">▶</div></div>
+  <div class="card"><svg class="mini" data-r="lamleav" width="64" height="64"></svg>
+    <div class="info"><div class="nm">Lam Leav<span class="km">ឡាំលាវ</span></div><div class="mt">Cambodia · Dance · 16 steps</div><span class="tag">DRAFT · VERIFY WITH MUSICIANS</span></div>
+    <div class="pbtn">▶</div></div>
+  <div class="section" style="margin-top:4px"><span>WORLD CLASSICS</span><span style="color:var(--gold)">See all</span></div>
+  <div class="card"><svg class="mini" data-r="clave" width="64" height="64"></svg>
+    <div class="info"><div class="nm">Son Clave 3-2</div><div class="mt">Cuba · Bell 1, 4, 7, 11, 13 · 16 steps</div><span class="tag v">VERIFIED</span></div>
+    <div class="use">Use</div></div>
+  <div class="card"><svg class="mini" data-r="bell128" width="64" height="64"></svg>
+    <div class="info"><div class="nm">Standard Bell 12/8</div><div class="mt">West Africa · 1, 3, 5, 6, 8, 10, 12 · 12 steps</div><span class="tag v">VERIFIED</span></div>
+    <div class="use">Use</div></div>
+  <div class="card"><svg class="mini" data-r="afrobeats" width="64" height="64"></svg>
+    <div class="info"><div class="nm">Afrobeats</div><div class="mt">Nigeria · Hats 3+3+2 · 16 steps</div><span class="tag v">VERIFIED</span></div>
+    <div class="use">Use</div></div>
+</div>
+
+<!-- ============ SCREEN 4: Learn / Story mode (12/8) ============ -->
+<div class="phone" id="s4">
+  <div class="status"><span>11:55</span><span>▮▮▮ 82%</span></div>
+  <div class="story-bars"><i class="done"></i><i class="done"></i><i class="done"></i><i class="cur"></i><i></i></div>
+  <div class="story-top"><span class="brand">JEANG <b>BEAT</b></span><span style="color:var(--dim);font-size:11px">LEARN · ចង្វាក់ពិភពលោក</span><span>100 BPM</span></div>
+  <div class="head" style="padding-top:12px">
+    <div class="kicker">HOW RHYTHMS LOOK AROUND THE WORLD</div>
+    <div class="sub">12/8: THE STANDARD 7-STROKE BELL PATTERN (1, 3, 5, 6, 8, 10, 12)</div>
+    <div class="titlerow"><div class="badge">4</div><div class="title">STANDARD BELL 12/8</div></div>
+    <div class="meta">WEST AFRICA · TRADITIONAL · 12/8 · 12 STEPS</div>
+  </div>
+  <div class="circle-wrap" style="margin-top:10px"><svg id="c4" width="350" height="350"></svg></div>
+  <div class="mgrid" id="g4" style="margin-top:4px"></div>
+  <div class="stepinfo"><span>STEP 1 / 12</span><span class="dots"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span></div>
+  <div class="caption"><div class="l1">Tap “Use this rhythm” to drop it into your beat</div><div class="l2 km">ចុច “ប្រើចង្វាក់នេះ” ដើម្បីដាក់វាចូលក្នុងបទរបស់អ្នក</div></div>
+  <div class="cta" style="padding:0 14px"><div class="secondary">⤴ Share video</div><div class="primary">Use this rhythm</div></div>
+</div>
+
+<script>
+/* ---- Rhythm data (1-indexed step numbers, as musicians count them) ---- */
+const C = { gold:'#F2B33D', red:'#E5484D', white:'#FFFFFF', purple:'#B57BFF', teal:'#3DD6C6', dim:'#5C6375' };
+
+/* Draws the rhythm circle: step markers around the edge, one polygon per ring. */
+function drawCircle(svg, o) {
+  const W = +svg.getAttribute('width'), cx = W/2, cy = W/2, R = W/2 - (o.mini ? 4 : 34);
+  const n = o.steps, ns = 'http://www.w3.org/2000/svg';
+  const el = (t, a, parent = svg) => { const e = document.createElementNS(ns, t); for (const k in a) e.setAttribute(k, a[k]); parent.appendChild(e); return e; };
+  const pos = (step, r) => { const a = -Math.PI/2 + (step-1) * 2*Math.PI/n; return [cx + r*Math.cos(a), cy + r*Math.sin(a)]; };
+  const defs = el('defs', {});
+  const glow = el('filter', {id: svg.id+'g', x:'-50%', y:'-50%', width:'200%', height:'200%'}, defs);
+  el('feGaussianBlur', {stdDeviation: o.mini ? 1.5 : 5}, glow);
+  // rings
+  el('circle', {cx, cy, r: R, fill:'none', stroke:'#2E3342', 'stroke-width': o.mini ? 1 : 1.2});
+  if (!o.mini) el('circle', {cx, cy, r: R*0.62, fill:'none', stroke:'#1E222C', 'stroke-width': 1});
+  // step ticks + numbers
+  for (let s = 1; s <= n; s++) {
+    const [x, y] = pos(s, R);
+    const isBeat = (s-1) % (n === 12 ? 3 : 4) === 0;
+    el('circle', {cx:x, cy:y, r: o.mini ? 1.2 : 3.2, fill:'#0F1115', stroke: isBeat ? '#6b7285' : '#3a3f4d', 'stroke-width': 1.2});
+    if (!o.mini) {
+      const [tx, ty] = pos(s, R + 20);
+      const big = o.highlight && o.highlight.includes(s);
+      const t = el('text', {x:tx, y:ty+4, 'text-anchor':'middle', 'font-size': big ? 15 : 10, 'font-weight': big ? 800 : 500, fill: big ? '#fff' : '#6b7285', 'font-family':'Inter'});
+      t.textContent = s;
+    }
+  }
+  // playhead hand
+  if (o.play) {
+    const [hx, hy] = pos(o.play, R + 2);
+    el('line', {x1:cx, y1:cy, x2:hx, y2:hy, stroke:'#fff', 'stroke-width':1.2, opacity:.75});
+    el('circle', {cx:hx, cy:hy, r:6, fill:'none', stroke:'#fff', 'stroke-width':1.8});
+  }
+  // polygons, drawn from inner to outer so outer rings stay on top
+  for (const ring of o.rings) {
+    const r = R * ring.r;
+    if (ring.dense) {  // dense parts (hi-hats): dotted ring instead of a polygon
+      el('circle', {cx, cy, r, fill:'none', stroke: ring.color, 'stroke-width':1, opacity:.25, 'stroke-dasharray':'2 4'});
+      for (const s of ring.hits) {
+        const [x, y] = pos(s, r);
+        const on = s === o.play;
+        if (on) el('circle', {cx:x, cy:y, r:7, fill:ring.color, filter:`url(#${svg.id}g)`, opacity:.9});
+        el('circle', {cx:x, cy:y, r: o.mini ? 1.3 : (on ? 4.2 : 2.6), fill: ring.color, opacity: on ? 1 : .8});
+      }
+      continue;
+    }
+    const pts = ring.hits.map(s => pos(s, r));
+    if (pts.length >= 2) {
+      el('polygon', {points: pts.map(p => p.join(',')).join(' '), fill: ring.color, 'fill-opacity': ring.fill ?? .16,
+        stroke: ring.color, 'stroke-width': o.mini ? 1.2 : (ring.selected ? 2.6 : 1.8), 'stroke-linejoin':'round'});
+    }
+    if (ring.spoke) el('line', {x1:cx, y1:cy, x2:pts[0][0], y2:pts[0][1], stroke:ring.color, 'stroke-width':1, opacity:.5});
+    ring.hits.forEach((s, i) => {
+      const [x, y] = pts[i];
+      const on = s === o.play;
+      if (on) el('circle', {cx:x, cy:y, r:13, fill:ring.color, filter:`url(#${svg.id}g)`, opacity:.9});
+      el('circle', {cx:x, cy:y, r: o.mini ? 2.2 : (on ? 8 : (ring.big ? 6.5 : 5)), fill: ring.color, stroke: on ? '#fff' : 'none', 'stroke-width': 2});
+    });
+    if (ring.editable) {  // empty slots you can tap to add
+      for (let s = 1; s <= n; s++) if (!ring.hits.includes(s)) {
+        const [x, y] = pos(s, r);
+        el('circle', {cx:x, cy:y, r:5, fill:'none', stroke: ring.color, 'stroke-width':1.2, 'stroke-dasharray':'2 2', opacity:.6});
+      }
+    }
+  }
+  el('circle', {cx, cy, r: o.mini ? 1.5 : 3, fill:'#fff'});
+  if (o.rotateArc) {  // arrows that hint "drag to rotate"
+    const r = R * o.rotateArc + 16;
+    const [ax, ay] = pos(n - 0.6, r), [bx, by] = pos(1.6, r);
+    el('path', {d:`M ${ax} ${ay} A ${r} ${r} 0 0 1 ${bx} ${by}`, fill:'none', stroke:C.purple, 'stroke-width':2, 'marker-end':'', opacity:.9});
+    el('polygon', {points:`${bx},${by} ${bx-9},${by-5} ${bx-7},${by+6}`, fill:C.purple});
+  }
+}
+
+/* Mini step grid under the circle. */
+function drawGrid(div, steps, rows, now) {
+  const per = steps === 12 ? 3 : 4;
+  for (const row of rows) {
+    const r = document.createElement('div'); r.className = 'mrow';
+    r.innerHTML = `<span class="nm" style="color:${row.label || '#E8EAF0'}">${row.name}</span>`;
+    for (let s = 1; s <= steps; s++) {
+      const c = document.createElement('span');
+      const on = row.hits.includes(s);
+      c.className = 'cell' + (Math.floor((s-1)/per) % 2 ? ' beat' : '') + (s === now ? ' now' : '');
+      if (on) c.style.background = row.color;
+      if (on && s !== now) c.style.opacity = row.color === '#C9CCD4' ? .85 : 1;
+      r.appendChild(c);
+      if (s % per === 0 && s < steps) { const g = document.createElement('span'); g.className = 'gap'; r.appendChild(g); }
+    }
+    div.appendChild(r);
+  }
+}
+
+/* Screen 1: the demo trap beat from the app, playing at step 9 */
+const trapKick = [1, 8, 11], trapSnare = [9], trapHats = [1,3,5,7,9,11,13,15,16];
+drawCircle(document.getElementById('c1'), { steps: 16, play: 9, highlight: [1, 8, 9, 11], rings: [
+  { hits: trapHats, color: C.white, r: .36, dense: true },
+  { hits: trapSnare, color: C.red, r: .66, big: true, spoke: true },
+  { hits: trapKick, color: C.gold, r: 1, big: true, fill: .2 },
+]});
+drawGrid(document.getElementById('g1'), 16, [
+  { name: 'HI-HAT', hits: trapHats, color: '#C9CCD4' },
+  { name: 'SNARE', hits: trapSnare, color: C.red, label: C.red },
+  { name: 'KICK', hits: trapKick, color: C.gold, label: C.gold },
+], 9);
+
+/* Screen 2: editing the perc ring with son clave 3-2 */
+drawCircle(document.getElementById('c2'), { steps: 16, highlight: [1, 4, 7, 11, 13], rotateArc: .62, rings: [
+  { hits: [1, 9], color: C.gold, r: 1, big: true, fill: 0 },
+  { hits: [1, 4, 7, 11, 13], color: C.purple, r: .62, selected: true, editable: true, fill: .22, big: true },
+]});
+
+/* Screen 3: mini circles in the library cards.
+   Khmer entries are PLACEHOLDER shapes only: they must be transcribed with Khmer musicians. */
+const mini = {
+  romvong:   { steps: 16, rings: [{ hits: [1, 5, 9, 13], color: C.purple, r: .62 }, { hits: [1, 7, 9, 15], color: C.gold, r: 1 }] },
+  saravan:   { steps: 16, rings: [{ hits: [1, 4, 9, 12], color: C.purple, r: .62 }, { hits: [1, 9], color: C.gold, r: 1 }] },
+  lamleav:   { steps: 16, rings: [{ hits: [3, 7, 11, 15], color: C.purple, r: .62 }, { hits: [1, 5, 9, 13], color: C.gold, r: 1 }] },
+  clave:     { steps: 16, rings: [{ hits: [1, 4, 7, 11, 13], color: C.white, r: .62 }, { hits: [1, 9], color: C.gold, r: 1 }] },
+  bell128:   { steps: 12, rings: [{ hits: [1, 3, 5, 6, 8, 10, 12], color: C.white, r: .62 }, { hits: [1, 4, 7, 10], color: C.gold, r: 1 }] },
+  afrobeats: { steps: 16, rings: [{ hits: [1, 3, 6, 8, 11, 14], color: C.white, r: .62 }, { hits: [1, 7], color: C.gold, r: 1 }] },
+};
+document.querySelectorAll('svg.mini').forEach((s, i) => { s.id = 'm' + i; drawCircle(s, { mini: true, ...mini[s.dataset.r] }); });
+
+/* Screen 4: 12/8 standard bell, story mode */
+const bell = [1, 3, 5, 6, 8, 10, 12], dun = [1, 4, 7, 10];
+drawCircle(document.getElementById('c4'), { steps: 12, play: 1, highlight: [1, 4, 7, 10], rings: [
+  { hits: bell, color: C.white, r: .6, fill: .12 },
+  { hits: dun, color: C.gold, r: 1, big: true, fill: .22 },
+]});
+drawGrid(document.getElementById('g4'), 12, [
+  { name: 'BELL', hits: bell, color: '#C9CCD4' },
+  { name: 'DRUM', hits: dun, color: C.gold, label: C.gold },
+], 1);
+</script>
+</body>
+</html>
