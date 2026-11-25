@@ -20,12 +20,12 @@ class WavWriter(
     private var buffer = ByteBuffer.allocate(0).order(ByteOrder.LITTLE_ENDIAN)
 
     init {
-        require(bits == 16 || bits == 24) { "bits must be 16 or 24" }
+        require(bits == 16 || bits == 24 || bits == 32) { "bits must be 16, 24 or 32 (float)" }
         val dataBytes = totalFrames * channels * bytesPerSample
         val header = ByteBuffer.allocate(44).order(ByteOrder.LITTLE_ENDIAN).apply {
             put("RIFF".toByteArray()); putInt((36 + dataBytes).toInt())
             put("WAVE".toByteArray())
-            put("fmt ".toByteArray()); putInt(16); putShort(1)
+            put("fmt ".toByteArray()); putInt(16); putShort(if (bits == 32) 3 else 1) // 3 = IEEE float
             putShort(channels.toShort()); putInt(sampleRate)
             putInt(sampleRate * channels * bytesPerSample)
             putShort((channels * bytesPerSample).toShort()); putShort(bits.toShort())
@@ -42,7 +42,9 @@ class WavWriter(
         buffer.clear()
         for (i in 0 until n) {
             val v = samples[i].coerceIn(-1f, 1f)
-            if (bits == 16) {
+            if (bits == 32) {
+                buffer.putFloat(v)
+            } else if (bits == 16) {
                 buffer.putShort((v * 32767f).roundToInt().toShort())
             } else {
                 val s = (v * 8388607f).roundToInt()

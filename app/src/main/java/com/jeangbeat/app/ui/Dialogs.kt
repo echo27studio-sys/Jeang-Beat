@@ -45,6 +45,8 @@ import androidx.compose.ui.unit.dp
 import com.jeangbeat.app.StudioState
 import com.jeangbeat.app.io.ExportFormat
 import com.jeangbeat.core.audio.PlayMode
+import com.jeangbeat.core.audio.OfflineRenderer.Range
+import androidx.compose.foundation.verticalScroll
 import com.jeangbeat.core.model.AutomationTarget
 import com.jeangbeat.core.model.Project
 import androidx.compose.foundation.layout.height
@@ -303,51 +305,109 @@ fun ProjectsDialog(state: StudioState, viewModel: StudioViewModel, files: FileAc
 
 
 @Composable
-fun ExportDialog(mode: PlayMode, onExport: (PlayMode, ExportFormat, Boolean) -> Unit, onDismiss: () -> Unit) {
-    var what by remember { mutableStateOf(mode) }
-    var format by remember { mutableStateOf(ExportFormat.WAV16) }
+fun ExportDialog(
+    mode: PlayMode,
+    hasLoop: Boolean,
+    onExport: (com.jeangbeat.app.io.ExportOptions, Boolean) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var range by remember { mutableStateOf(if (mode == PlayMode.PATTERN) Range.PATTERN else Range.SONG) }
+    var format by remember { mutableStateOf(ExportFormat.MP3) }
+    var kbps by remember { mutableStateOf(320) }
+    var rate by remember { mutableStateOf(44_100) }
+    var normalize by remember { mutableStateOf(false) }
     val canMusic = com.jeangbeat.app.io.MediaStoreFiles.supported
     var toMusic by remember { mutableStateOf(canMusic) }
+
+    @Composable
+    fun <T> Choice(selected: Boolean, label: String, onClick: () -> Unit) {
+        Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+            RadioButton(selected = selected, onClick = onClick)
+            Text(label)
+        }
+    }
+
+    @Composable
+    fun Header(text: String) {
+        Text(text, style = MaterialTheme.typography.labelLarge, color = JbColors.TextDim, modifier = Modifier.padding(top = 8.dp))
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.export_audio)) },
         text = {
-            Column {
-                Text(stringResource(R.string.export_what), style = MaterialTheme.typography.labelLarge, color = JbColors.TextDim)
-                listOf(PlayMode.SONG to R.string.export_song, PlayMode.PATTERN to R.string.export_pattern).forEach { (m, label) ->
-                    Row(Modifier.fillMaxWidth().clickable { what = m }.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                        RadioButton(selected = what == m, onClick = { what = m })
-                        Text(stringResource(label))
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                Header(stringResource(R.string.export_what))
+                Choice<Unit>(range == Range.SONG, stringResource(R.string.export_song)) { range = Range.SONG }
+                Choice<Unit>(range == Range.PATTERN, stringResource(R.string.export_pattern)) { range = Range.PATTERN }
+                if (hasLoop) Choice<Unit>(range == Range.LOOP, stringResource(R.string.export_loop)) { range = Range.LOOP }
+
+                Header(stringResource(R.string.format))
+                listOf(
+                    ExportFormat.MP3 to stringResource(R.string.format_mp3),
+                    ExportFormat.WAV16 to stringResource(R.string.format_wav16),
+                    ExportFormat.WAV24 to stringResource(R.string.format_wav24),
+                    ExportFormat.WAV32F to stringResource(R.string.format_wav32f),
+                    ExportFormat.M4A to stringResource(R.string.format_m4a),
+                    ExportFormat.STEMS to stringResource(R.string.format_stems),
+                ).forEach { (f, label) -> Choice<Unit>(format == f, label) { format = f } }
+                if (format == ExportFormat.MP3) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(start = 12.dp)) {
+                        com.jeangbeat.core.audio.Mp3Writer.BITRATES.forEach { b ->
+                            FilterChip(selected = kbps == b, onClick = { kbps = b }, label = { Text("$b kbps") })
+                        }
                     }
                 }
-                Spacer(Modifier.height(8.dp))
-                Text(stringResource(R.string.format), style = MaterialTheme.typography.labelLarge, color = JbColors.TextDim)
-                listOf(
-                    ExportFormat.WAV16 to R.string.format_wav16,
-                    ExportFormat.WAV24 to R.string.format_wav24,
-                    ExportFormat.M4A to R.string.format_m4a,
-                    ExportFormat.STEMS to R.string.format_stems,
-                ).forEach { (f, label) ->
-                    Row(Modifier.fillMaxWidth().clickable { format = f }.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                        RadioButton(selected = format == f, onClick = { format = f })
-                        Text(stringResource(label))
+
+                Header(stringResource(R.string.sample_rate))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf(44_100, 48_000).forEach { r -> FilterChip(selected = rate == r, onClick = { rate = r }, label = { Text("${r / 1000.0} kHz") }) }
+                }
+                if (format != ExportFormat.STEMS) {
+                    Row(Modifier.fillMaxWidth().clickable { normalize = !normalize }, verticalAlignment = Alignment.CenterVertically) {
+                        androidx.compose.material3.Checkbox(checked = normalize, onCheckedChange = { normalize = it })
+                        Text(stringResource(R.string.normalize))
                     }
                 }
                 if (canMusic) {
-                    Spacer(Modifier.height(8.dp))
-                    Row(Modifier.fillMaxWidth().clickable { toMusic = true }.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                        RadioButton(selected = toMusic, onClick = { toMusic = true })
-                        Text(stringResource(R.string.export_to_music))
-                    }
-                    Row(Modifier.fillMaxWidth().clickable { toMusic = false }.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                        RadioButton(selected = !toMusic, onClick = { toMusic = false })
-                        Text(stringResource(R.string.choose_location))
+                    Header(stringResource(R.string.destination))
+                    Choice<Unit>(toMusic, stringResource(if (format == ExportFormat.STEMS) R.string.export_to_download else R.string.export_to_music)) { toMusic = true }
+                    Choice<Unit>(!toMusic, stringResource(R.string.choose_location)) { toMusic = false }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                onExport(com.jeangbeat.app.io.ExportOptions(format, range, rate, kbps, normalize), toMusic)
+            }) { Text(stringResource(R.string.export_audio)) }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
+    )
+}
+
+/** Third-party software notices (LAME is LGPL and must be credited with a way to get its source). */
+@Composable
+fun LicensesDialog(onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.licenses)) },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                listOf(
+                    "LAME 3.100 — MP3 encoder" to "GNU LGPL v2 or later. Used as a separate shared library (libmp3lame.so). " +
+                        "Source: lame.sourceforge.io, and in the Jeang Beat repository under core/audio/src/main/cpp/third_party/lame.",
+                    "Oboe — Google" to "Apache License 2.0. Low-latency audio.",
+                    "AndroidX, Jetpack Compose, Material 3" to "Apache License 2.0.",
+                    "Kotlin, kotlinx.serialization, kotlinx.coroutines" to "Apache License 2.0.",
+                ).forEach { (name, text) ->
+                    Column {
+                        Text(name, fontWeight = FontWeight.Bold)
+                        Text(text, style = MaterialTheme.typography.bodySmall, color = JbColors.TextDim)
                     }
                 }
             }
         },
-        confirmButton = { TextButton(onClick = { onExport(what, format, toMusic) }) { Text(stringResource(R.string.export_audio)) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.ok)) } },
     )
 }
 

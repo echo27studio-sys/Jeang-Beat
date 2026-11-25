@@ -253,4 +253,12 @@
     <string name="length_custom">Custom length…</string>
     <string name="length_bars_prompt">Pattern length in bars (1–512)</string>
     <string name="ruler_hint">Tap the ruler to set the start · long-press and drag to loop</string>
+    <string name="format_mp3">MP3 (smallest, plays everywhere)</string>
+    <string name="format_wav32f">WAV 32-bit float (for mastering)</string>
+    <string name="export_loop">Loop region</string>
+    <string name="sample_rate">Sample rate</string>
+    <string name="normalize">Normalize (make it as loud as possible without clipping)</string>
+    <string name="destination">Save to</string>
+    <string name="export_to_download">Save to Download/Jeang Beat</string>
+    <string name="licenses">Open-source licences</string>
 </resources>

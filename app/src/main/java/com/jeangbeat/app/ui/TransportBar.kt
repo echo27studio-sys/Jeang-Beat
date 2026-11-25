@@ -62,7 +62,7 @@ import kotlin.math.roundToInt
 /** File actions that need the Android document picker (wired in MainActivity). */
 interface FileActions {
     fun pickAudio(target: com.jeangbeat.app.AudioTarget)
-    fun exportAudio(mode: PlayMode, format: com.jeangbeat.app.io.ExportFormat)
+    fun exportAudio(options: com.jeangbeat.app.io.ExportOptions)
     fun exportProject()
     fun importProject()
 }
@@ -154,6 +154,8 @@ private fun Menu(
     onLanguageChange: (AppLanguage) -> Unit,
 ) {
     var open by remember { mutableStateOf(false) }
+    var showLicenses by remember { mutableStateOf(false) }
+    if (showLicenses) LicensesDialog { showLicenses = false }
     Box {
         // A labelled "File" button instead of a bare ⋮ so save/export are easy to find.
         Row(
@@ -186,6 +188,7 @@ private fun Menu(
             DropdownMenuItem(leadingIcon = { Icon(Icons.Default.Archive, null) }, text = { Text(stringResource(R.string.export_project)) }, onClick = { close(); files.exportProject() })
             DropdownMenuItem(leadingIcon = { Icon(Icons.Default.Unarchive, null) }, text = { Text(stringResource(R.string.import_project)) }, onClick = { close(); files.importProject() })
             DropdownMenuItem(leadingIcon = { Icon(Icons.Default.LibraryMusic, null) }, text = { Text(stringResource(R.string.import_audio)) }, onClick = { close(); files.pickAudio(com.jeangbeat.app.AudioTarget.PLAYLIST) })
+            DropdownMenuItem(text = { Text(stringResource(R.string.licenses)) }, onClick = { close(); showLicenses = true })
             HorizontalDivider()
             Text(stringResource(R.string.language), style = MaterialTheme.typography.labelMedium, color = JbColors.TextDim, modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp))
             listOf(

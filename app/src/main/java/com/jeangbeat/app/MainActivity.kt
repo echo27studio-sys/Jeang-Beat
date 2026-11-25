@@ -9,9 +9,10 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import com.jeangbeat.app.io.ExportFormat
+import com.jeangbeat.app.io.ExportOptions
+import com.jeangbeat.app.io.exportBaseName
 import com.jeangbeat.app.ui.FileActions
 import com.jeangbeat.app.ui.StudioScreen
-import com.jeangbeat.core.audio.PlayMode
 import com.jeangbeat.core.data.ProjectBundle
 import com.jeangbeat.core.ui.JeangBeatTheme
 import com.jeangbeat.core.ui.R as UiR
@@ -21,13 +22,13 @@ class MainActivity : ComponentActivity(), FileActions {
 
     // Pending choices while the system file picker is open.
     private var audioTarget = AudioTarget.PLAYLIST
-    private var exportMode = PlayMode.SONG
-    private var exportFormat = ExportFormat.WAV16
+    private var exportOptions = ExportOptions()
 
     private val openAudio = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
         uri?.let { viewModel.importAudio(it, audioTarget) }
     }
     private val createWav = registerForActivityResult(ActivityResultContracts.CreateDocument("audio/wav")) { uri -> uri?.let(::startExport) }
+    private val createMp3 = registerForActivityResult(ActivityResultContracts.CreateDocument("audio/mpeg")) { uri -> uri?.let(::startExport) }
     private val createM4a = registerForActivityResult(ActivityResultContracts.CreateDocument("audio/mp4")) { uri -> uri?.let(::startExport) }
     private val createZip = registerForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri -> uri?.let(::startExport) }
     private val createBundle = registerForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { uri: Uri? ->
@@ -44,8 +45,7 @@ class MainActivity : ComponentActivity(), FileActions {
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putString(KEY_AUDIO_TARGET, audioTarget.name)
-        outState.putString(KEY_EXPORT_MODE, exportMode.name)
-        outState.putString(KEY_EXPORT_FORMAT, exportFormat.name)
+        outState.putSerializable(KEY_EXPORT_OPTIONS, exportOptions)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -53,8 +53,8 @@ class MainActivity : ComponentActivity(), FileActions {
         // The system file picker can outlive this activity (e.g. rotation): restore what was asked for.
         savedInstanceState?.let { b ->
             b.getString(KEY_AUDIO_TARGET)?.let { audioTarget = AudioTarget.valueOf(it) }
-            b.getString(KEY_EXPORT_MODE)?.let { exportMode = PlayMode.valueOf(it) }
-            b.getString(KEY_EXPORT_FORMAT)?.let { exportFormat = ExportFormat.valueOf(it) }
+            @Suppress("DEPRECATION")
+            (b.getSerializable(KEY_EXPORT_OPTIONS) as? ExportOptions)?.let { exportOptions = it }
         }
         enableEdgeToEdge()
         viewModel.ensureProject(
@@ -92,12 +92,12 @@ class MainActivity : ComponentActivity(), FileActions {
         openAudio.launch(arrayOf("audio/*"))
     }
 
-    override fun exportAudio(mode: PlayMode, format: ExportFormat) {
-        exportMode = mode
-        exportFormat = format
-        val base = fileBase() + if (mode == PlayMode.PATTERN) " (pattern)" else ""
-        when (format) {
-            ExportFormat.WAV16, ExportFormat.WAV24 -> createWav.launch("$base.wav")
+    override fun exportAudio(options: ExportOptions) {
+        exportOptions = options
+        val base = exportBaseName(viewModel.state.value.project.name, options)
+        when (options.format) {
+            ExportFormat.WAV16, ExportFormat.WAV24, ExportFormat.WAV32F -> createWav.launch("$base.wav")
+            ExportFormat.MP3 -> createMp3.launch("$base.mp3")
             ExportFormat.M4A -> createM4a.launch("$base.m4a")
             ExportFormat.STEMS -> createZip.launch("$base stems.zip")
         }
@@ -107,12 +107,11 @@ class MainActivity : ComponentActivity(), FileActions {
 
     override fun importProject() = openBundle.launch(arrayOf("*/*"))
 
-    private fun startExport(uri: Uri) = viewModel.exportAudio(uri, exportMode, exportFormat)
+    private fun startExport(uri: Uri) = viewModel.exportAudio(uri, exportOptions)
 
     private companion object {
         const val KEY_AUDIO_TARGET = "audio_target"
-        const val KEY_EXPORT_MODE = "export_mode"
-        const val KEY_EXPORT_FORMAT = "export_format"
+        const val KEY_EXPORT_OPTIONS = "export_options"
     }
 
     private fun fileBase(): String = viewModel.state.value.project.name.replace(Regex("[\\\\/:*?\"<>|]"), "_").ifBlank { "Jeang Beat" }

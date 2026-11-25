@@ -6,6 +6,7 @@ import androidx.annotation.StringRes
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.jeangbeat.app.io.ExportFormat
+import com.jeangbeat.app.io.ExportOptions
 import com.jeangbeat.app.io.Exporter
 import com.jeangbeat.app.io.MediaStoreFiles
 import com.jeangbeat.app.io.SampleLibrary
@@ -645,7 +646,7 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
 
     // ---- Export / project files ----------------------------------------------------------
 
-    fun exportAudio(uri: Uri, mode: PlayMode, format: ExportFormat) {
+    fun exportAudio(uri: Uri, options: ExportOptions) {
         commitGesture()
         val snapshot = project
         exportCancel = AtomicBoolean(false)
@@ -654,7 +655,7 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             val ok = withContext(Dispatchers.Default) {
                 runCatching {
-                    exporter.exportAudio(snapshot, mode, format, uri, { cancel.get() }) { p ->
+                    exporter.exportAudio(snapshot, options, uri, { cancel.get() }) { p ->
                         _state.update { it.copy(exportProgress = p) }
                     }
                 }.getOrDefault(false)
@@ -670,7 +671,8 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
      * Exports straight to Music/Jeang Beat (stems to Download/Jeang Beat) without a file
      * picker, then offers Share. Returns false when not supported (Android 8–9).
      */
-    fun exportToMediaStore(mode: PlayMode, format: ExportFormat, baseName: String): Boolean {
+    fun exportToMediaStore(options: ExportOptions, baseName: String): Boolean {
+        val format = options.format
         if (!MediaStoreFiles.supported) return false
         commitGesture()
         val snapshot = project
@@ -682,7 +684,7 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             val ok = withContext(Dispatchers.Default) {
                 runCatching {
-                    exporter.exportAudio(snapshot, mode, format, uri, { cancel.get() }) { p -> _state.update { it.copy(exportProgress = p) } }
+                    exporter.exportAudio(snapshot, options, uri, { cancel.get() }) { p -> _state.update { it.copy(exportProgress = p) } }
                 }.getOrDefault(false)
             }
             _state.update { it.copy(exportProgress = null) }

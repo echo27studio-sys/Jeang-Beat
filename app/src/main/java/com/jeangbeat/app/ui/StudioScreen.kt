@@ -44,6 +44,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.jeangbeat.app.AppLanguage
 import com.jeangbeat.app.AudioTarget
 import com.jeangbeat.app.MessageAction
+import com.jeangbeat.app.io.exportBaseName
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarResult
 import com.jeangbeat.app.StudioState
@@ -223,10 +224,10 @@ fun StudioScreen(viewModel: StudioViewModel, files: FileActions, onLanguageChang
     if (showExport) {
         ExportDialog(
             state.mode,
-            onExport = { mode, format, toMusic ->
+            hasLoop = state.project.song.hasLoop,
+            onExport = { options, toMusic ->
                 showExport = false
-                val base = state.project.name.replace(Regex("[\\\\/:*?\"<>|]"), "_").ifBlank { "Jeang Beat" }
-                if (!toMusic || !viewModel.exportToMediaStore(mode, format, base)) files.exportAudio(mode, format)
+                if (!toMusic || !viewModel.exportToMediaStore(options, exportBaseName(state.project.name, options))) files.exportAudio(options)
             },
             onDismiss = { showExport = false },
         )

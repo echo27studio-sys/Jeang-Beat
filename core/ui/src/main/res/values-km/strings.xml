@@ -243,4 +243,12 @@
     <string name="length_custom">ប្រវែងផ្ទាល់ខ្លួន…</string>  <!-- TODO native review -->
     <string name="length_bars_prompt">ប្រវែងលំនាំជារបារ (1–512)</string>  <!-- TODO native review -->
     <string name="ruler_hint">ប៉ះបន្ទាត់ដើម្បីកំណត់ចំណុចចាប់ផ្តើម · ចុចឱ្យយូរ ហើយអូសដើម្បីរង្វិល</string>  <!-- TODO native review -->
+    <string name="format_mp3">MP3 (តូចបំផុត លេងបានគ្រប់កន្លែង)</string>  <!-- TODO native review -->
+    <string name="format_wav32f">WAV 32-bit float (សម្រាប់ mastering)</string>  <!-- TODO native review -->
+    <string name="export_loop">តំបន់រង្វិល</string>  <!-- TODO native review -->
+    <string name="sample_rate">អត្រាគំរូ</string>  <!-- TODO native review -->
+    <string name="normalize">Normalize (ឱ្យឮខ្លាំងបំផុតដោយមិនខូចសំឡេង)</string>  <!-- TODO native review -->
+    <string name="destination">រក្សាទុកទៅ</string>  <!-- TODO native review -->
+    <string name="export_to_download">រក្សាទុកទៅ Download/Jeang Beat</string>  <!-- TODO native review -->
+    <string name="licenses">អាជ្ញាប័ណ្ណកូដបើកចំហ</string>  <!-- TODO native review -->
 </resources>

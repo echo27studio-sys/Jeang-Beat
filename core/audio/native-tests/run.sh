@@ -5,3 +5,5 @@ cd "$(dirname "$0")"
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release > /dev/null
 cmake --build build
 ./build/engine_test
+echo "MP3 (LAME)"
+./build/mp3_test
