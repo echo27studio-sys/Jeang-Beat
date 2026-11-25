@@ -249,4 +249,8 @@
     <string name="unsaved_changes">Unsaved changes</string>
     <string name="pattern_split">Pattern split into %1$d patterns</string>
     <string name="nothing_to_split">Nothing to split: the pattern has notes on one channel only</string>
+    <string name="length_auto">Length: Auto (%1$d bars now)</string>
+    <string name="length_custom">Custom length…</string>
+    <string name="length_bars_prompt">Pattern length in bars (1–512)</string>
+    <string name="ruler_hint">Tap the ruler to set the start · long-press and drag to loop</string>
 </resources>

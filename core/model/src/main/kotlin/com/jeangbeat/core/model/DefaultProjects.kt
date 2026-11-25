@@ -85,9 +85,10 @@ object DefaultProjects {
             Pattern(12, "Chords", notes = keys, color = 7),
         )
         val clips = listOf(
-            Clip.PatternClip(20, 1, 0, 8 * bar, 10),
-            Clip.PatternClip(21, 2, 2 * bar, 6 * bar, 11),
-            Clip.PatternClip(22, 3, 0, 8 * bar, 12),
+            // Long clips repeat their 1-bar patterns, so they don't follow the pattern length.
+            Clip.PatternClip(20, 1, 0, 8 * bar, 10, followsPattern = false),
+            Clip.PatternClip(21, 2, 2 * bar, 6 * bar, 11, followsPattern = false),
+            Clip.PatternClip(22, 3, 0, 8 * bar, 12, followsPattern = false),
         )
         val mixed = base.copy(patterns = patterns, song = base.song.copy(clips = clips))
             // Keys and snare get some reverb; the 808 ducks under the kick.
@@ -104,7 +105,20 @@ object DefaultProjects {
      */
     fun migrate(project: Project): Project {
         if (project.formatVersion >= Project.CURRENT_FORMAT_VERSION) return project
+        val from = project.formatVersion
         var p = project.copy(formatVersion = Project.CURRENT_FORMAT_VERSION)
+        if (from < 3) {
+            // 2.x patterns had a fixed length; keep it so old songs sound the same. A clip
+            // follows its pattern only if it was exactly the pattern's length.
+            p = p.copy(patterns = p.patterns.map { it.copy(lengthMode = LengthMode.FIXED) })
+            p = p.copy(
+                song = p.song.copy(
+                    clips = p.song.clips.map { c ->
+                        if (c is Clip.PatternClip) c.copy(followsPattern = c.lengthTicks == p.pattern(c.patternId)?.lengthTicks) else c
+                    },
+                ),
+            )
+        }
         if (p.channels.all { it.mixerTrack == 0 }) {
             p = p.copy(channels = p.channels.mapIndexed { i, c -> c.copy(mixerTrack = if (i < MIXER_INSERTS) i + 1 else 0) })
             p = p.copy(

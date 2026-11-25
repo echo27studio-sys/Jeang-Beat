@@ -46,6 +46,8 @@ import com.jeangbeat.core.model.setChannelColor
 import com.jeangbeat.core.model.setPatternColor
 import com.jeangbeat.core.model.shiftChannelSteps
 import com.jeangbeat.core.model.splitByChannel
+import com.jeangbeat.core.model.setPatternAutoLength
+import com.jeangbeat.core.model.syncClipLengths
 import com.jeangbeat.core.model.clearLoop
 import com.jeangbeat.core.model.defaultPitch
 import com.jeangbeat.core.model.deleteClip
@@ -139,6 +141,10 @@ data class StudioState(
     val waveforms: Map<Int, FloatArray> = emptyMap(),
     /** True while there are edits that are not saved to disk yet. */
     val unsaved: Boolean = false,
+    /** Piano-roll loop region (PAT mode), or null. */
+    val rollLoop: IntRange? = null,
+    /** Where PAT playback starts inside the pattern. */
+    val rollStart: Int = 0,
 )
 
 class StudioViewModel(application: Application) : AndroidViewModel(application) {
@@ -205,7 +211,8 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
     /** Applies an edit as one undo step. */
     fun edit(transform: (Project) -> Project) {
         commitGesture()
-        val next = transform(history.present)
+        // Clips of auto-length patterns grow/shrink with them.
+        val next = transform(history.present).syncClipLengths()
         if (next == history.present) return
         history.push(next)
         publish()
@@ -214,7 +221,7 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
     /** In-progress edit (dragging): no undo step until [commitGesture]. */
     fun editTransient(transform: (Project) -> Project) {
         if (gestureBase == null) gestureBase = history.present
-        history.replace(transform(history.present))
+        history.replace(transform(history.present).syncClipLengths())
         publish(save = false)
     }
 
@@ -249,7 +256,7 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
         publish()
     }
 
-    private fun pushToEngine() = engine.load(history.present, _state.value.mode)
+    private fun pushToEngine() = engine.load(history.present, _state.value.mode, _state.value.rollLoop)
 
     private fun publish(save: Boolean = true) {
         val p = history.present
@@ -336,6 +343,24 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
 
     fun takeMeters(out: FloatArray) = engine.takeMeters(out)
 
+    fun setPatternPosition(tick: Int) {
+        engine.setPatternPosition(tick)
+        _state.update { it.copy(rollStart = tick) }
+    }
+
+    fun setRollLoop(start: Int, end: Int) {
+        _state.update { it.copy(rollLoop = if (end > start) start until end else null) }
+        setPatternPosition(start)
+        pushToEngine()
+    }
+
+    fun clearRollLoop() {
+        _state.update { it.copy(rollLoop = null) }
+        pushToEngine()
+    }
+
+    fun setPatternAuto() = edit { it.setPatternAutoLength() }
+
     fun setSongPosition(tick: Int) {
         engine.setPosition(tick)
         _state.update { it.copy(songPosition = tick) }
@@ -392,7 +417,11 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
 
     fun clearChannel(channelId: Int) = edit { it.clearChannel(channelId) }
 
-    fun selectPattern(patternId: Int) = edit { it.selectPattern(patternId) }
+    fun selectPattern(patternId: Int) {
+        _state.update { it.copy(rollLoop = null, rollStart = 0) }
+        engine.setPatternPosition(0)
+        edit { it.selectPattern(patternId) }
+    }
 
     fun addPattern(name: String, copyCurrent: Boolean) = edit { it.addPattern(name, copyCurrent) }
 

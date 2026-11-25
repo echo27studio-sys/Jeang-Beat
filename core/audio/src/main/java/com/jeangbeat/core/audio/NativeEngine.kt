@@ -27,7 +27,11 @@ internal class NativeEngine {
     external fun nativeLoadSample(ptr: Long, id: Int, data: FloatArray, channels: Int, sampleRate: Float)
     external fun nativeUnloadSample(ptr: Long, id: Int)
 
-    external fun nativeBeginSnapshot(ptr: Long, mode: Int, currentPattern: Int, songLength: Long, loopStart: Long, loopEnd: Long)
+    external fun nativeBeginSnapshot(
+        ptr: Long, mode: Int, currentPattern: Int, songLength: Long, loopStart: Long, loopEnd: Long,
+        patternLoopStart: Long, patternLoopEnd: Long,
+    )
+    external fun nativeSetPatternPosition(ptr: Long, tick: Long)
     external fun nativeAddChannel(
         ptr: Long, type: Int, sound: Int, sampleId: Int, params: FloatArray,
         volume: Float, pan: Float, muted: Boolean, solo: Boolean, insert: Int,

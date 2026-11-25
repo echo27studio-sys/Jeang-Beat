@@ -239,4 +239,8 @@
     <string name="unsaved_changes">មានការកែប្រែមិនទាន់រក្សាទុក</string>  <!-- TODO native review -->
     <string name="pattern_split">បានបំបែកលំនាំជា %1$d</string>  <!-- TODO native review -->
     <string name="nothing_to_split">គ្មានអ្វីត្រូវបំបែកទេ</string>  <!-- TODO native review -->
+    <string name="length_auto">ប្រវែង៖ ស្វ័យប្រវត្តិ (%1$d របារ)</string>  <!-- TODO native review -->
+    <string name="length_custom">ប្រវែងផ្ទាល់ខ្លួន…</string>  <!-- TODO native review -->
+    <string name="length_bars_prompt">ប្រវែងលំនាំជារបារ (1–512)</string>  <!-- TODO native review -->
+    <string name="ruler_hint">ប៉ះបន្ទាត់ដើម្បីកំណត់ចំណុចចាប់ផ្តើម · ចុចឱ្យយូរ ហើយអូសដើម្បីរង្វិល</string>  <!-- TODO native review -->
 </resources>

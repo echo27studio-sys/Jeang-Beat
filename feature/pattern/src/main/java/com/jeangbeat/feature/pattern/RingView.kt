@@ -115,7 +115,7 @@ internal fun RingView(project: Project, playheadStep: Int?, actions: PatternActi
             }
             Text(
                 "${NOTE_NAMES[project.scale.root]} ${project.scale.scale.displayName().uppercase()} · ${project.tempo.roundToInt()} BPM · " +
-                    "${pattern.lengthSteps} STEPS · ${pattern.meter.label}",
+                    "${pattern.stepCount} STEPS · ${pattern.meter.label}",
                 fontSize = 11.sp, color = JbColors.TextDim, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 4.dp),
             )
         }
@@ -164,7 +164,7 @@ internal fun RingView(project: Project, playheadStep: Int?, actions: PatternActi
                 Row(Modifier.padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(ch.name.uppercase(), fontSize = 9.sp, fontWeight = FontWeight.Bold, color = JbColors.channel(ch.color), modifier = Modifier.width(64.dp), maxLines = 1)
                     Row(horizontalArrangement = Arrangement.spacedBy(2.dp), modifier = Modifier.horizontalScroll(rememberScrollState())) {
-                        for (s in 0 until pattern.lengthSteps) {
+                        for (s in 0 until pattern.stepCount) {
                             val alt = (s / pattern.meter.stepsPerBeat) % 2 == 1
                             Box(
                                 Modifier
@@ -180,7 +180,7 @@ internal fun RingView(project: Project, playheadStep: Int?, actions: PatternActi
             }
             Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    stringResource(R.string.step_counter, (playheadStep ?: 0) + 1, pattern.lengthSteps),
+                    stringResource(R.string.step_counter, (playheadStep ?: 0) + 1, pattern.stepCount),
                     fontSize = 10.sp, color = JbColors.TextDim, fontWeight = FontWeight.Bold,
                 )
                 Spacer(Modifier.weight(1f))
@@ -194,7 +194,7 @@ internal fun RingView(project: Project, playheadStep: Int?, actions: PatternActi
 
     if (showEuclid && selected != null) {
         EuclidSheet(
-            steps = pattern.lengthSteps,
+            steps = pattern.stepCount,
             stepsPerBar = pattern.meter.stepsPerBar,
             current = pattern.channelSteps(selected.id),
             channelName = selected.name,
@@ -216,7 +216,7 @@ private fun RingCanvas(
     onSelect: (Int) -> Unit,
 ) {
     val pattern = project.currentPattern
-    val n = pattern.lengthSteps
+    val n = pattern.stepCount
     val measurer = rememberTextMeasurer()
     val currentIds by rememberUpdatedState(channelIds)
     val currentSelected by rememberUpdatedState(selectedId)

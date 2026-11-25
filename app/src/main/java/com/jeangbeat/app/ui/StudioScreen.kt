@@ -87,6 +87,7 @@ private sealed interface RenameRequest {
     data class Channel(val id: Int) : RenameRequest
     data class CloneChannel(val id: Int) : RenameRequest
     data object NewProject : RenameRequest
+    data object PatternLength : RenameRequest
 }
 
 @Composable
@@ -262,6 +263,7 @@ fun StudioScreen(viewModel: StudioViewModel, files: FileActions, onLanguageChang
             is RenameRequest.Channel -> stringResource(R.string.rename) to (state.project.channel(r.id)?.name ?: "")
             is RenameRequest.CloneChannel -> stringResource(R.string.clone_channel) to ((state.project.channel(r.id)?.name ?: "") + " 2")
             RenameRequest.NewProject -> stringResource(R.string.new_project) to stringResource(R.string.untitled)
+            RenameRequest.PatternLength -> stringResource(R.string.length_bars_prompt) to state.project.currentPattern.bars.toString()
         }
         TextInputDialog(title, initial, onConfirm = { name ->
             when (r) {
@@ -272,6 +274,7 @@ fun StudioScreen(viewModel: StudioViewModel, files: FileActions, onLanguageChang
                 is RenameRequest.Channel -> viewModel.renameChannel(r.id, name)
                 is RenameRequest.CloneChannel -> viewModel.cloneChannel(r.id, name)
                 RenameRequest.NewProject -> viewModel.newProject(name, context.getString(R.string.pattern_default_name, 1), withDemo = false)
+                RenameRequest.PatternLength -> name.trim().toIntOrNull()?.let { viewModel.setPatternBars(it.coerceIn(1, 512)) }
             }
             rename = null
         }, onDismiss = { rename = null })
@@ -302,7 +305,11 @@ private fun TabContent(
                 val pattern = project.currentPattern
                 val ghosts = project.channels.filter { it.id != rollChannel.id && it.instrument.isMelodic }.flatMap { pattern.notesFor(it.id) }
                 val actions = remember(vm, rollChannel.id) { pianoRollActions(vm, rollChannel.id) }
-                PianoRoll(rollChannel, pattern, ghosts, project.scale, state.rollSnap, patternTick, state.isPlaying && state.mode == PlayMode.PATTERN, actions)
+                PianoRoll(
+                    rollChannel, pattern, ghosts, project.scale, state.rollSnap, patternTick,
+                    state.isPlaying && state.mode == PlayMode.PATTERN, actions,
+                    loop = state.rollLoop, startTick = state.rollStart,
+                )
             } else {
                 val actions = remember(vm) { patternActions(vm, onSettings, onAddChannel, onRename, onReplace, patternNameFor) }
                 PatternScreen(project, patternTick, actions)
@@ -339,6 +346,8 @@ private fun patternActions(
     override fun replaceInstrument(channelId: Int) = onReplace(channelId)
     override fun setPatternColor(color: Int) = vm.setPatternColor(color)
     override fun splitByChannel() = vm.splitByChannel()
+    override fun setPatternAuto() = vm.setPatternAuto()
+    override fun customPatternLength() = onRename(RenameRequest.PatternLength)
     override fun toggleStep(channelId: Int, step: Int) = vm.toggleStep(channelId, step)
     override fun updateStepNote(channelId: Int, step: Int, final: Boolean, transform: (Note) -> Note) = vm.updateStepNote(channelId, step, final, transform)
     override fun toggleMute(channelId: Int) = vm.toggleMute(channelId)
@@ -373,6 +382,9 @@ private fun pianoRollActions(vm: StudioViewModel, channelId: Int) = object : Pia
         vm.togglePlay()
     }
     override fun close() = vm.closePianoRoll()
+    override fun setPosition(tick: Int) = vm.setPatternPosition(tick)
+    override fun setLoop(startTick: Int, endTick: Int) = vm.setRollLoop(startTick, endTick)
+    override fun clearLoop() = vm.clearRollLoop()
 }
 
 private fun playlistActions(

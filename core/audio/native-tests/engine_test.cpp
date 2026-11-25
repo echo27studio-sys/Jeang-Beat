@@ -221,6 +221,24 @@ void testSong() {
     }
 }
 
+void testPatternLoop() {
+    std::puts("Pattern loop (piano roll)");
+    Engine& e = *newEngine();
+    // 4-bar pattern, hit at bar 3; loop bars 3..4 starting from bar 3.
+    e.beginSnapshot(0, 0, 4 * kBar, -1, -1, 2 * kBar, 3 * kBar);
+    std::vector<float> p = drumParams();
+    e.addChannel(0, 0, -1, p.data(), 3, 0.8f, 0.f, false, false, 0);
+    addNotes(e, e.addPattern(4 * kBar, kTicksPerStep), 0, {2 * kBar, 24, 60, 127});
+    e.commitSnapshot();
+    e.setPatternPosition(2 * kBar);
+    e.play();
+    auto out = renderLeft(e, kBar * kFramesPerTick + 2000);
+    check(firstNonZero(out) == 0, "PAT mode starts at the pattern position");
+    const int again = firstNonZero(out, 60000);
+    check(std::abs(again - kBar * kFramesPerTick) <= 1, "piano-roll loop repeats one bar (got " + std::to_string(again) + ")");
+    delete &e;
+}
+
 void testMixer() {
     std::puts("Mixer");
     const std::vector<int> hit = {0, 24, 60, 127};
@@ -546,6 +564,7 @@ int main() {
     testKit();
     testTiming();
     testSong();
+    testPatternLoop();
     testMixer();
     testSidechain();
     testEffects();

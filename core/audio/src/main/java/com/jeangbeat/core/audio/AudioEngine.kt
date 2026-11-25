@@ -56,6 +56,9 @@ class AudioEngine(private val realtime: Boolean = true) : AutoCloseable {
 
     /** Moves the song marker; while playing in SONG mode playback jumps there. */
     fun setPosition(tick: Int) = call { native.nativeSetPosition(it, tick.toLong()) }
+
+    /** Where PAT-mode playback starts inside the pattern (piano roll ruler). */
+    fun setPatternPosition(tick: Int) = call { native.nativeSetPatternPosition(it, tick.toLong()) }
     fun allNotesOff() = call { native.nativeAllNotesOff(it) }
     fun setMasterGain(gain: Float) = call { native.nativeSetMasterGain(it, gain) }
     fun setRepeat(rate: RepeatRate) = call { native.nativeSetRepeatTicks(it, rate.ticks) }
@@ -92,7 +95,7 @@ class AudioEngine(private val realtime: Boolean = true) : AutoCloseable {
      * to the engine. Safe to call on every edit: the engine swaps the new state
      * in between audio blocks without glitches, and effect tails carry on.
      */
-    fun load(project: Project, mode: PlayMode) = synchronized(lock) {
+    fun load(project: Project, mode: PlayMode, patternLoop: IntRange? = null) = synchronized(lock) {
         val p = ptr
         if (p == 0L) return@synchronized
         if (project.tempo != lastTempo) {
@@ -110,6 +113,8 @@ class AudioEngine(private val realtime: Boolean = true) : AutoCloseable {
             p, mode.ordinal, current, song.lengthTicks.toLong(),
             if (song.hasLoop) song.loopStart.toLong() else -1L,
             if (song.hasLoop) song.loopEnd.toLong() else -1L,
+            patternLoop?.first?.toLong() ?: -1L,
+            patternLoop?.let { it.last + 1L } ?: -1L,
         )
 
         project.channels.forEachIndexed { index, ch ->

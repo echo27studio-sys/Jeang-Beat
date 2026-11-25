@@ -22,14 +22,18 @@ fun Pattern.withNotes(channelId: Int, notes: List<Note>): Pattern {
 
 private val noteOrder = compareBy<Note>({ it.startTick }, { it.pitch })
 
-/** Clamps notes into the pattern and removes duplicates (same start and pitch; the last one wins). */
+/**
+ * Clamps notes into the pattern (FIXED) or into the 512-bar limit (AUTO, where the
+ * pattern then grows to fit) and removes duplicates (same start and pitch; last wins).
+ */
 fun Pattern.normalized(notes: List<Note>): List<Note> {
     val byKey = LinkedHashMap<Long, Note>()
+    val limit = maxTicks
     for (n in notes) {
-        val start = n.startTick.coerceIn(0, lengthTicks - 1)
+        val start = n.startTick.coerceIn(0, limit - 1)
         val clean = n.copy(
             startTick = start,
-            lengthTicks = n.lengthTicks.coerceIn(1, lengthTicks - start),
+            lengthTicks = n.lengthTicks.coerceIn(1, limit - start),
             pitch = n.pitch.coerceIn(0, 127),
             velocity = n.velocity.coerceIn(1, 127),
             pan = n.pan.coerceIn(-1f, 1f),
@@ -68,7 +72,10 @@ fun Pattern.isStepChannel(channelId: Int, instrument: Instrument): Boolean =
 
 fun Project.toggleStep(channelId: Int, step: Int, velocity: Int = Note.DEFAULT_VELOCITY): Project {
     val channel = channel(channelId) ?: return this
-    if (step !in 0 until currentPattern.lengthSteps) return this
+    val pattern0 = currentPattern
+    // AUTO patterns accept steps past the end (the rack shows one extra bar) and grow.
+    val maxStep = if (pattern0.lengthMode == LengthMode.AUTO) pattern0.maxTicks / pattern0.stepTicks else pattern0.stepCount
+    if (step !in 0 until maxStep) return this
     return updateCurrentPattern { pattern ->
         val tick = pattern.stepTick(step)
         val existing = pattern.notesFor(channelId)
@@ -115,12 +122,13 @@ fun Project.recordHit(channelId: Int, tick: Int, pitch: Int, velocity: Int, grid
 
 // ---- Patterns ------------------------------------------------------------
 
-/** Sets the length in bars, keeping the meter. Notes past the end are dropped or trimmed. */
+/** Sets a FIXED length in bars (1..512), keeping the meter. Notes past the end are dropped or trimmed. */
 fun Project.setPatternBars(bars: Int): Project = updateCurrentPattern { pattern ->
-    val steps = bars * pattern.meter.stepsPerBar
+    val steps = bars.coerceIn(1, MAX_PATTERN_BARS) * pattern.meter.stepsPerBar
     val lengthTicks = steps * pattern.stepTicks
     pattern.copy(
         lengthSteps = steps,
+        lengthMode = LengthMode.FIXED,
         notes = pattern.notes
             .mapValues { (_, notes) ->
                 notes.filter { it.startTick < lengthTicks }
@@ -130,13 +138,33 @@ fun Project.setPatternBars(bars: Int): Project = updateCurrentPattern { pattern 
     )
 }
 
+/** Switches the current pattern to AUTO length (grows with its notes, at least 1 bar). */
+fun Project.setPatternAutoLength(): Project = updateCurrentPattern { pattern ->
+    pattern.copy(lengthMode = LengthMode.AUTO, lengthSteps = pattern.meter.stepsPerBar)
+}
+
+/** Clips that follow an auto-length pattern take the pattern's current length. */
+fun Project.syncClipLengths(): Project {
+    var changed = false
+    val clips = song.clips.map { c ->
+        if (c is Clip.PatternClip && c.followsPattern) {
+            val len = (pattern(c.patternId)?.lengthTicks ?: c.lengthTicks) - c.offsetTicks
+            if (len > 0 && len != c.lengthTicks) {
+                changed = true
+                c.copy(lengthTicks = len)
+            } else c
+        } else c
+    }
+    return if (changed) copy(song = song.copy(clips = clips)) else this
+}
+
 /** Compatibility helper: length in 16th steps. */
 fun Project.setPatternLength(steps: Int): Project = setPatternBars((steps / Meter.FOUR_FOUR.stepsPerBar).coerceAtLeast(1))
 
 /** Switches between 4/4 (16th steps) and 12/8 (triplet steps). Bars and note times are kept. */
 fun Project.setPatternMeter(meter: Meter): Project = updateCurrentPattern { pattern ->
     if (pattern.meter == meter) return@updateCurrentPattern pattern
-    val bars = (pattern.lengthTicks / Timing.TICKS_PER_BAR).coerceAtLeast(1)
+    val bars = if (pattern.lengthMode == LengthMode.FIXED) pattern.bars else (pattern.lengthSteps * pattern.stepTicks / Timing.TICKS_PER_BAR).coerceAtLeast(1)
     pattern.copy(stepTicks = meter.stepTicks, lengthSteps = bars * meter.stepsPerBar)
 }
 
@@ -147,7 +175,7 @@ fun Project.addPattern(name: String, copyCurrent: Boolean): Project {
     val pattern = if (copyCurrent) {
         source.copy(id = nextId, name = name, color = color)
     } else {
-        Pattern(id = nextId, name = name, lengthSteps = source.lengthSteps, stepTicks = source.stepTicks, color = color)
+        Pattern(id = nextId, name = name, lengthSteps = source.meter.stepsPerBar, stepTicks = source.stepTicks, color = color)
     }
     return copy(patterns = patterns + pattern, currentPatternId = pattern.id, nextId = nextId + 1)
 }

@@ -54,6 +54,7 @@ JNIEXPORT jdouble JNICALL JB_FN(nativeLatencyMillis)(JNIEnv*, jobject, jlong ptr
 JNIEXPORT void JNICALL JB_FN(nativePlay)(JNIEnv*, jobject, jlong ptr) { from(ptr)->engine.play(); }
 JNIEXPORT void JNICALL JB_FN(nativeStop)(JNIEnv*, jobject, jlong ptr) { from(ptr)->engine.stop(); }
 JNIEXPORT void JNICALL JB_FN(nativeSetPosition)(JNIEnv*, jobject, jlong ptr, jlong tick) { from(ptr)->engine.setPosition(tick); }
+JNIEXPORT void JNICALL JB_FN(nativeSetPatternPosition)(JNIEnv*, jobject, jlong ptr, jlong tick) { from(ptr)->engine.setPatternPosition(tick); }
 JNIEXPORT void JNICALL JB_FN(nativeSetTempo)(JNIEnv*, jobject, jlong ptr, jfloat bpm) { from(ptr)->engine.setTempo(bpm); }
 JNIEXPORT void JNICALL JB_FN(nativeSetSwing)(JNIEnv*, jobject, jlong ptr, jfloat swing) { from(ptr)->engine.setSwing(swing); }
 JNIEXPORT void JNICALL JB_FN(nativeNoteOn)(JNIEnv*, jobject, jlong ptr, jint ch, jint pitch, jint vel) { from(ptr)->engine.noteOn(ch, pitch, vel); }
@@ -73,8 +74,8 @@ JNIEXPORT void JNICALL JB_FN(nativeLoadSample)(JNIEnv* env, jobject, jlong ptr, 
 JNIEXPORT void JNICALL JB_FN(nativeUnloadSample)(JNIEnv*, jobject, jlong ptr, jint id) { from(ptr)->engine.unloadSample(id); }
 
 JNIEXPORT void JNICALL JB_FN(nativeBeginSnapshot)(JNIEnv*, jobject, jlong ptr, jint mode, jint currentPattern, jlong songLength,
-                                                  jlong loopStart, jlong loopEnd) {
-    from(ptr)->engine.beginSnapshot(mode, currentPattern, songLength, loopStart, loopEnd);
+                                                  jlong loopStart, jlong loopEnd, jlong patternLoopStart, jlong patternLoopEnd) {
+    from(ptr)->engine.beginSnapshot(mode, currentPattern, songLength, loopStart, loopEnd, patternLoopStart, patternLoopEnd);
 }
 
 JNIEXPORT jint JNICALL JB_FN(nativeAddChannel)(JNIEnv* env, jobject, jlong ptr, jint type, jint sound, jint sampleId,

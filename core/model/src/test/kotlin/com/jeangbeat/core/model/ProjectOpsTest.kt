@@ -30,7 +30,9 @@ class ProjectOpsTest {
 
     @Test
     fun toggleStepOutsidePatternIsIgnored() {
-        assertSame(base, base.toggleStep(kick, 16))
+        // AUTO patterns grow instead (see AutoLengthTest); a FIXED pattern ignores steps past its end.
+        val fixed = base.setPatternBars(1)
+        assertSame(fixed, fixed.toggleStep(kick, 16))
         assertSame(base, base.toggleStep(kick, -1))
         assertSame(base, base.toggleStep(999, 0))
     }

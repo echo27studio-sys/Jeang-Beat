@@ -82,6 +82,7 @@ void Engine::send(const Command& cmd) {
 void Engine::play() { send({CommandType::Play}); }
 void Engine::stop() { send({CommandType::Stop}); }
 void Engine::setPosition(int64_t tick) { send({CommandType::SetPosition, 0, 0, 0, 0.f, std::max<int64_t>(0, tick)}); }
+void Engine::setPatternPosition(int64_t tick) { send({CommandType::SetPatternPosition, 0, 0, 0, 0.f, std::max<int64_t>(0, tick)}); }
 void Engine::setTempo(float bpm) { send({CommandType::SetTempo, 0, 0, 0, std::clamp(bpm, 20.f, 400.f)}); }
 void Engine::setSwing(float amount) { send({CommandType::SetSwing, 0, 0, 0, std::clamp(amount, 0.f, 1.f)}); }
 void Engine::noteOn(int32_t channel, int32_t pitch, int32_t velocity) { send({CommandType::NoteOn, channel, pitch, velocity}); }
@@ -104,13 +105,16 @@ void Engine::loadSample(int32_t id, const float* data, int64_t frames, int32_t c
 
 void Engine::unloadSample(int32_t id) { samples_.erase(id); }
 
-void Engine::beginSnapshot(int32_t mode, int32_t currentPattern, int64_t songLength, int64_t loopStart, int64_t loopEnd) {
+void Engine::beginSnapshot(int32_t mode, int32_t currentPattern, int64_t songLength, int64_t loopStart, int64_t loopEnd,
+                           int64_t patternLoopStart, int64_t patternLoopEnd) {
     building_ = std::make_unique<Snapshot>();
     building_->mode = mode == 1 ? PlayMode::Song : PlayMode::Pattern;
     building_->currentPattern = std::max(0, currentPattern);
     building_->songLength = std::max<int64_t>(kTicksPerStep, songLength);
     building_->loopStart = loopStart;
     building_->loopEnd = loopEnd;
+    building_->patternLoopStart = patternLoopStart;
+    building_->patternLoopEnd = patternLoopEnd;
 }
 
 int32_t Engine::addChannel(int32_t type, int32_t sound, int32_t sampleId, const float* params, int32_t paramCount,
@@ -352,17 +356,24 @@ void Engine::handle(const Command& cmd) {
     switch (cmd.type) {
         case CommandType::Play:
             playing_ = true;
-            tick_ = current_->mode == PlayMode::Song ? startTick_ : 0.0;
+            tick_ = current_->mode == PlayMode::Song ? startTick_ : patternStart_;
             break;
         case CommandType::Stop:
             playing_ = false;
-            tick_ = current_->mode == PlayMode::Song ? startTick_ : 0.0;
+            tick_ = current_->mode == PlayMode::Song ? startTick_ : patternStart_;
             releaseSequenced();
             break;
         case CommandType::SetPosition:
             startTick_ = static_cast<double>(cmd.t);
             if (current_->mode == PlayMode::Song) {
                 tick_ = startTick_;
+                if (playing_) releaseSequenced();
+            }
+            break;
+        case CommandType::SetPatternPosition:
+            patternStart_ = static_cast<double>(cmd.t);
+            if (current_->mode == PlayMode::Pattern) {
+                tick_ = patternStart_;
                 if (playing_) releaseSequenced();
             }
             break;
@@ -432,8 +443,14 @@ void Engine::timelineBounds(double& start, double& end) const {
             end = static_cast<double>(s.songLength);
         }
     } else {
-        start = 0.0;
-        end = static_cast<double>(s.lengthTicks());
+        const double len = s.lengthTicks();
+        if (s.patternLoopStart >= 0 && s.patternLoopEnd > s.patternLoopStart && s.patternLoopStart < len) {
+            start = static_cast<double>(s.patternLoopStart);
+            end = std::min(static_cast<double>(s.patternLoopEnd), len);
+        } else {
+            start = 0.0;
+            end = len;
+        }
     }
 }
 
@@ -829,7 +846,7 @@ void Engine::render(float* out, int32_t frames) {
             if (current_->mode != lastMode_) {
                 // PAT <-> SONG switch: restart from the right place.
                 lastMode_ = current_->mode;
-                tick_ = lastMode_ == PlayMode::Song ? startTick_ : 0.0;
+                tick_ = lastMode_ == PlayMode::Song ? startTick_ : patternStart_;
                 releaseSequenced();
             }
         }

@@ -45,10 +45,18 @@ data class Channel(
     val mixerTrack: Int = 0,
 )
 
+/** AUTO: the pattern grows to its last note (FL Studio default). FIXED: an explicit length. */
+@Serializable
+enum class LengthMode { AUTO, FIXED }
+
+/** Longest pattern allowed. */
+const val MAX_PATTERN_BARS = 512
+
 @Serializable
 data class Pattern(
     val id: Int,
     val name: String,
+    /** FIXED: the length. AUTO: the minimum length (the pattern can grow beyond it). */
     val lengthSteps: Int = 16,
     /** Ticks per step: 24 = 16th notes (4/4), 32 = triplet 8ths (12/8). */
     val stepTicks: Int = Timing.TICKS_PER_STEP,
@@ -56,8 +64,30 @@ data class Pattern(
     val notes: Map<Int, List<Note>> = emptyMap(),
     /** Index into the UI's colour palette, used for playlist clips. */
     val color: Int = 0,
+    val lengthMode: LengthMode = LengthMode.AUTO,
 ) {
-    val lengthTicks: Int get() = lengthSteps * stepTicks
+    /**
+     * Effective length. FIXED: [lengthSteps] steps. AUTO: at least [lengthSteps] steps, extended
+     * to the end of the last note rounded up to a whole bar.
+     */
+    @kotlinx.serialization.Transient
+    val lengthTicks: Int = run {
+        val min = lengthSteps * stepTicks
+        if (lengthMode == LengthMode.FIXED) {
+            min
+        } else {
+            val lastEnd = notes.values.maxOfOrNull { list -> list.maxOfOrNull { it.endTick } ?: 0 } ?: 0
+            maxOf(min, Timing.ceilTo(lastEnd, Timing.TICKS_PER_BAR)).coerceAtMost(MAX_PATTERN_BARS * Timing.TICKS_PER_BAR)
+        }
+    }
+
+    /** Number of steps currently shown (follows [lengthTicks]). */
+    val stepCount: Int get() = lengthTicks / stepTicks
+
+    /** Furthest tick a note may reach: the end for FIXED, the 512-bar limit for AUTO. */
+    val maxTicks: Int get() = if (lengthMode == LengthMode.FIXED) lengthTicks else MAX_PATTERN_BARS * Timing.TICKS_PER_BAR
+
+    val bars: Int get() = (lengthTicks / Timing.TICKS_PER_BAR).coerceAtLeast(1)
 
     val meter: Meter get() = Meter.forStepTicks(stepTicks)
 
@@ -116,6 +146,6 @@ data class Project(
     fun sample(id: Int): SampleRef? = samples.firstOrNull { it.id == id }
 
     companion object {
-        const val CURRENT_FORMAT_VERSION = 2
+        const val CURRENT_FORMAT_VERSION = 3
     }
 }

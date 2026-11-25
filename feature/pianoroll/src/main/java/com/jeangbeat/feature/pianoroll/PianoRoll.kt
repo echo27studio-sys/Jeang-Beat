@@ -81,6 +81,7 @@ import com.jeangbeat.core.model.ChordType
 import com.jeangbeat.core.model.NOTE_NAMES
 import com.jeangbeat.core.model.Note
 import com.jeangbeat.core.model.NoteKey
+import com.jeangbeat.core.model.LengthMode
 import com.jeangbeat.core.model.Pattern
 import com.jeangbeat.core.model.Scale
 import com.jeangbeat.core.model.ScaleSetting
@@ -117,6 +118,11 @@ interface PianoRollActions {
     fun clipboard(): List<Note>
     fun togglePlay()
     fun close()
+
+    /** Ruler: where PAT playback starts, and the piano-roll loop region. */
+    fun setPosition(tick: Int)
+    fun setLoop(startTick: Int, endTick: Int)
+    fun clearLoop()
 }
 
 enum class RollTool { DRAW, PAINT, SELECT, SLICE, DELETE, MUTE, SLIDE }
@@ -139,6 +145,8 @@ fun PianoRoll(
     isPlaying: Boolean,
     actions: PianoRollActions,
     modifier: Modifier = Modifier,
+    loop: IntRange? = null,
+    startTick: Int = 0,
 ) {
     var tool by rememberSaveable { mutableStateOf(RollTool.DRAW) }
     var chord by rememberSaveable { mutableStateOf(ChordType.NONE) }
@@ -233,7 +241,7 @@ fun PianoRoll(
             ActionChip("+12") { applyToSelection { n, s -> n.transposed(12, s) }.also { selection = selection.map { NoteKey(it.startTick, it.pitch + 12) }.toSet() } }
             ActionChip("⧉ " + stringResource(R.string.duplicate)) {
                 var copies = emptySet<NoteKey>()
-                actions.editNotes(true) { list -> list.duplicated(sel, snap.ticks.coerceAtLeast(pattern.stepTicks), pattern.lengthTicks).also { copies = it.second }.first }
+                actions.editNotes(true) { list -> list.duplicated(sel, snap.ticks.coerceAtLeast(pattern.stepTicks), pattern.maxTicks).also { copies = it.second }.first }
                 if (copies.isNotEmpty()) selection = copies
             }
             ActionChip(stringResource(R.string.copy)) { actions.copy(if (sel.isEmpty()) notes else notes.filter { it.key in sel }) }
@@ -255,6 +263,16 @@ fun PianoRoll(
             }
         }
 
+        // ---- bar ruler (tap = start position, long-press + drag = loop) ----
+        Row(Modifier.fillMaxWidth().height(24.dp).background(Color(0xFF13161C))) {
+            Box(Modifier.width(KEYBOARD_WIDTH).fillMaxHeight(), contentAlignment = Alignment.Center) {
+                if (loop != null) {
+                    Text("⟲✕", fontSize = 11.sp, color = JbColors.Accent, fontWeight = FontWeight.Bold, modifier = Modifier.clickable(onClick = actions::clearLoop).padding(4.dp))
+                }
+            }
+            RollRuler(pattern, tickPx, hScroll, loop, startTick, playheadTick, snap, measurer, actions, Modifier.weight(1f).fillMaxHeight())
+        }
+
         // ---- keyboard + grid ----
         Row(Modifier.weight(1f).fillMaxWidth()) {
             Box(Modifier.width(KEYBOARD_WIDTH).fillMaxHeight().verticalScroll(vScroll)) {
@@ -269,7 +287,7 @@ fun PianoRoll(
                 ) { drawKeyboard(rows, rowPx, measurer) }
             }
             BoxWithConstraints(Modifier.weight(1f).fillMaxHeight()) {
-                val gridWidth = with(density) { (pattern.lengthTicks * tickPx).toDp() }.coerceAtLeast(maxWidth)
+                val gridWidth = with(density) { (pattern.viewTicks * tickPx).toDp() }.coerceAtLeast(maxWidth)
                 val gridHeight = with(density) { (rows.size * rowPx).toDp() }.coerceAtLeast(maxHeight)
                 RollGrid(
                     channel, pattern, notes, ghostNotes, rows, rowOf, scale, snap, tool, chord, selection,
@@ -421,8 +439,8 @@ private fun RollGrid(
                     fun content(p: Offset) = Offset(p.x + hScroll.value, p.y + vScroll.value)
                     val start = content(down.position)
                     val hit = s.hitTest(start)
-                    val tickAt = { p: Offset -> (p.x / s.tickPx).toInt().coerceIn(0, s.pattern.lengthTicks - 1) }
-                    val snapFloor = { t: Int -> (floor(t.toDouble() / s.snap.ticks).toInt() * s.snap.ticks).coerceIn(0, s.pattern.lengthTicks - 1) }
+                    val tickAt = { p: Offset -> (p.x / s.tickPx).toInt().coerceIn(0, s.pattern.maxTicks - 1) }
+                    val snapFloor = { t: Int -> (floor(t.toDouble() / s.snap.ticks).toInt() * s.snap.ticks).coerceIn(0, s.pattern.maxTicks - 1) }
 
                     var gesture: Gesture = when {
                         hit != null && (s.tool == RollTool.DRAW || s.tool == RollTool.SLIDE || s.tool == RollTool.SELECT) -> {
@@ -494,7 +512,7 @@ private fun RollGrid(
                                 val moved2 = g.originals.map { n ->
                                     val row = (g.rowOf[n.pitch] ?: g.anchorRow) + dr
                                     val pitch = g.rows.getOrNull(row.coerceIn(0, g.rows.lastIndex)) ?: n.pitch
-                                    val maxStart = (cur.pattern.lengthTicks - n.lengthTicks).coerceAtLeast(0)
+                                    val maxStart = (cur.pattern.maxTicks - n.lengthTicks).coerceAtLeast(0)
                                     n.copy(startTick = (n.startTick + dt).coerceIn(0, maxStart), pitch = pitch)
                                 }
                                 actions.editNotes(false) { _ -> g.base.filterNot { it in g.originals } + moved2 }
@@ -505,7 +523,7 @@ private fun RollGrid(
                                 val end = Timing.quantize(tickAt(p) + 1, cur.snap.ticks)
                                 val delta = end - first.endTick
                                 val resized = g.originals.map { n ->
-                                    val maxLen = (cur.pattern.lengthTicks - n.startTick).coerceAtLeast(1)
+                                    val maxLen = (cur.pattern.maxTicks - n.startTick).coerceAtLeast(1)
                                     val minLen = minOf(cur.snap.ticks.coerceAtMost(cur.pattern.stepTicks), maxLen)
                                     n.copy(lengthTicks = (n.lengthTicks + delta).coerceIn(minLen, maxLen))
                                 }
@@ -515,7 +533,7 @@ private fun RollGrid(
                             is Gesture.Paint -> {
                                 val t = snapFloor(tickAt(p))
                                 if (g.painted.add(t)) {
-                                    actions.editNotes(false) { list -> list + Note(t, cur.newLength.coerceAtMost(cur.pattern.lengthTicks - t), g.pitch) }
+                                    actions.editNotes(false) { list -> list + Note(t, cur.newLength.coerceAtMost(cur.pattern.maxTicks - t), g.pitch) }
                                 }
                             }
                             is Gesture.Marquee -> marquee = Rect(g.start, p)
@@ -543,7 +561,7 @@ private fun RollGrid(
                         }
                         is Gesture.Paint -> if (moved) actions.editNotes(true) { it } else {
                             val t = snapFloor(tickAt(start))
-                            actions.editNotes(true) { list -> list + Note(t, s2.newLength.coerceAtMost(s2.pattern.lengthTicks - t), g.pitch) }
+                            actions.editNotes(true) { list -> list + Note(t, s2.newLength.coerceAtMost(s2.pattern.maxTicks - t), g.pitch) }
                             actions.previewNote(g.pitch)
                         }
                         is Gesture.Marquee -> {
@@ -569,7 +587,7 @@ private fun RollGrid(
                                     // handled above for DRAW/SLIDE (Move); PAINT on a note does nothing
                                 } else if (pitch != null) {
                                     val t = snapFloor(tickAt(start))
-                                    val len = s2.newLength.coerceAtMost(s2.pattern.lengthTicks - t)
+                                    val len = s2.newLength.coerceAtMost(s2.pattern.maxTicks - t)
                                     val added = chordNotes(pitch, s2.chord, t, len).map { if (s2.tool == RollTool.SLIDE) it.copy(slide = true) else it }
                                     actions.editNotes(true) { it + added }
                                     actions.previewNote(pitch)
@@ -683,7 +701,8 @@ private fun DrawScope.drawGrid(rows: List<Int>, pattern: Pattern, tickPx: Float,
     }
     var tick = 0
     val beat = pattern.stepTicks * pattern.meter.stepsPerBeat
-    while (tick <= pattern.lengthTicks) {
+    val lastTick = (size.width / tickPx).toInt()
+    while (tick <= lastTick) {
         val x = tick * tickPx
         val (c, w) = when {
             tick % Timing.TICKS_PER_BAR == 0 -> JbColors.TextDim.copy(alpha = 0.6f) to 2f
@@ -693,9 +712,13 @@ private fun DrawScope.drawGrid(rows: List<Int>, pattern: Pattern, tickPx: Float,
         drawLine(c, Offset(x, 0f), Offset(x, size.height), w)
         tick += pattern.stepTicks
     }
-    // Shade the area past the end of the pattern
+    // FIXED: shade past the end. AUTO: a gold line marks the current end (drawing past it extends the pattern).
     val end = pattern.lengthTicks * tickPx
-    if (end < size.width) drawRect(Color.Black.copy(alpha = 0.4f), Offset(end, 0f), Size(size.width - end, size.height))
+    if (pattern.lengthMode == LengthMode.FIXED) {
+        if (end < size.width) drawRect(Color.Black.copy(alpha = 0.4f), Offset(end, 0f), Size(size.width - end, size.height))
+    } else {
+        drawLine(JbColors.Accent.copy(alpha = 0.6f), Offset(end, 0f), Offset(end, size.height), 2f)
+    }
 }
 
 private fun DrawScope.drawNoteRect(n: Note, row: Int, tickPx: Float, rowPx: Float, color: Color) {
@@ -734,7 +757,7 @@ private fun PropertyLane(
     val st = rememberUpdatedState(Triple(notes, selection, lane))
     val color = JbColors.channel(channel.color)
     BoxWithConstraints(modifier) {
-        val width = with(LocalDensity.current) { (pattern.lengthTicks * tickPx).toDp() }.coerceAtLeast(maxWidth)
+        val width = with(LocalDensity.current) { (pattern.viewTicks * tickPx).toDp() }.coerceAtLeast(maxWidth)
         Box(
             Modifier
                 .fillMaxSize()
@@ -770,7 +793,7 @@ private fun PropertyLane(
                 val h = size.height
                 if (lane != Lane.VELOCITY && lane != Lane.RELEASE) drawLine(JbColors.Outline, Offset(0f, h / 2), Offset(size.width, h / 2), 1f)
                 var t = 0
-                while (t <= pattern.lengthTicks) {
+                while (t <= pattern.viewTicks) {
                     drawLine(JbColors.GridLine, Offset(t * tickPx, 0f), Offset(t * tickPx, h), 1f)
                     t += pattern.stepTicks
                 }
@@ -789,6 +812,84 @@ private fun PropertyLane(
                     drawLine(c, Offset(x + 2f, base), Offset(x + 2f, y), 3f)
                     drawCircle(c, 4.dp.toPx(), Offset(x + 2f, y))
                 }
+            }
+        }
+    }
+}
+
+/** Ticks the editor shows: the pattern plus two empty bars to draw into (AUTO). */
+internal val Pattern.viewTicks: Int
+    get() = if (lengthMode == LengthMode.AUTO) lengthTicks + 2 * Timing.TICKS_PER_BAR else lengthTicks
+
+@Composable
+private fun RollRuler(
+    pattern: Pattern,
+    tickPx: Float,
+    hScroll: ScrollState,
+    loop: IntRange?,
+    startTick: Int,
+    playheadTick: Float?,
+    snap: Snap,
+    measurer: TextMeasurer,
+    actions: PianoRollActions,
+    modifier: Modifier,
+) {
+    var draft by remember { mutableStateOf<IntRange?>(null) }
+    val currentSnap by rememberUpdatedState(snap)
+    val currentActions by rememberUpdatedState(actions)
+    BoxWithConstraints(modifier) {
+        val width = with(LocalDensity.current) { (pattern.viewTicks * tickPx).toDp() }.coerceAtLeast(maxWidth)
+        Box(
+            Modifier
+                .fillMaxSize()
+                .pointerInput(tickPx) {
+                    awaitEachGesture {
+                        val down = awaitFirstDown()
+                        val grid = maxOf(currentSnap.ticks, Timing.TICKS_PER_BEAT)
+                        fun tickAt(x: Float) = ((x + hScroll.value) / tickPx).roundToInt().coerceAtLeast(0)
+                        var released = false
+                        withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) {
+                            while (true) {
+                                val e = awaitPointerEvent()
+                                if (e.changes.none { it.pressed }) { released = true; return@withTimeoutOrNull }
+                            }
+                        }
+                        if (released) {
+                            currentActions.setPosition(Timing.floorTo(tickAt(down.position.x), grid))
+                            return@awaitEachGesture
+                        }
+                        val start = Timing.floorTo(tickAt(down.position.x), grid)
+                        var end = start + grid
+                        draft = start until end
+                        while (true) {
+                            val e = awaitPointerEvent()
+                            val c = e.changes.firstOrNull { it.id == down.id } ?: break
+                            if (!c.pressed) break
+                            c.consume()
+                            end = maxOf(start + grid, Timing.ceilTo(tickAt(c.position.x), grid))
+                            draft = start until end
+                        }
+                        draft = null
+                        currentActions.setLoop(start, end)
+                    }
+                }
+                .horizontalScroll(hScroll, enabled = false),
+        ) {
+            Canvas(Modifier.size(width, 24.dp)) {
+                val bars = pattern.viewTicks / Timing.TICKS_PER_BAR
+                for (b in 0..bars) {
+                    val x = b * Timing.TICKS_PER_BAR * tickPx
+                    drawLine(JbColors.Outline, Offset(x, size.height * 0.4f), Offset(x, size.height), 1f)
+                    val t = measurer.measure("${b + 1}", TextStyle(fontSize = 10.sp, fontWeight = FontWeight.Bold, color = if (b * Timing.TICKS_PER_BAR < pattern.lengthTicks) JbColors.TextDim else JbColors.TextDim.copy(alpha = 0.4f)))
+                    drawText(t, topLeft = Offset(x + 3f, 2f))
+                }
+                (draft ?: loop)?.let { l ->
+                    drawRect(JbColors.Accent.copy(alpha = 0.85f), Offset(l.first * tickPx, size.height - 5.dp.toPx()), Size((l.last + 1 - l.first) * tickPx, 5.dp.toPx()))
+                }
+                val sx = startTick * tickPx
+                val tri = Path().apply { moveTo(sx, size.height - 9.dp.toPx()); lineTo(sx + 8.dp.toPx(), size.height - 9.dp.toPx()); lineTo(sx, size.height); close() }
+                drawPath(tri, JbColors.Accent)
+                playheadTick?.let { drawLine(Color.White, Offset(it * tickPx, 0f), Offset(it * tickPx, size.height), 1.5f) }
             }
         }
     }

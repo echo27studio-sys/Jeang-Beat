@@ -129,7 +129,8 @@ fun Project.setChannelSteps(channelId: Int, steps: Collection<Int>): Project {
     return updateCurrentPattern { pattern ->
         val keep = pattern.notesFor(channelId).filter { it.startTick % pattern.stepTicks != 0 }
         val existing = pattern.notesFor(channelId).associateBy { it.startTick }
-        val new = steps.filter { it in 0 until pattern.lengthSteps }.map { s ->
+        val maxStep = if (pattern.lengthMode == LengthMode.AUTO) pattern.maxTicks / pattern.stepTicks else pattern.stepCount
+        val new = steps.filter { it in 0 until maxStep }.map { s ->
             val tick = pattern.stepTick(s)
             existing[tick] ?: Note(tick, pattern.stepTicks, channel.instrument.defaultPitch)
         }

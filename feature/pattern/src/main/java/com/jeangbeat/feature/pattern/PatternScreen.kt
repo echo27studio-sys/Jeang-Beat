@@ -34,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.jeangbeat.core.model.LengthMode
 import com.jeangbeat.core.model.Meter
 import com.jeangbeat.core.model.Note
 import com.jeangbeat.core.model.Project
@@ -86,6 +87,8 @@ interface PatternActions {
     // ---- 3.0 pattern menu ----
     fun setPatternColor(color: Int)
     fun splitByChannel()
+    fun setPatternAuto()
+    fun customPatternLength()
 }
 
 enum class PatternView { RACK, RING }
@@ -171,12 +174,18 @@ private fun PatternMenu(project: Project, actions: PatternActions) {
                 DropdownMenuItem(text = { Text("🗑  " + stringResource(R.string.delete_pattern), color = JbColors.Record) }, onClick = { close(); actions.deletePattern() })
             }
             HorizontalDivider()
-            Timing.PATTERN_BARS.forEach { b ->
+            val auto = pattern.lengthMode == LengthMode.AUTO
+            DropdownMenuItem(
+                text = { Text((if (auto) "✓ " else "   ") + stringResource(R.string.length_auto, bars)) },
+                onClick = { close(); actions.setPatternAuto() },
+            )
+            listOf(1, 2, 4, 8, 16, 32).forEach { b ->
                 DropdownMenuItem(
-                    text = { Text((if (b == bars) "✓ " else "   ") + stringResource(R.string.bars_count, b)) },
+                    text = { Text((if (!auto && b == bars) "✓ " else "   ") + stringResource(R.string.bars_count, b)) },
                     onClick = { close(); actions.setPatternBars(b) },
                 )
             }
+            DropdownMenuItem(text = { Text("   " + stringResource(R.string.length_custom)) }, onClick = { close(); actions.customPatternLength() })
             HorizontalDivider()
             Meter.entries.forEach { m ->
                 DropdownMenuItem(

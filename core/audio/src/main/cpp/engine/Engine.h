@@ -43,6 +43,7 @@ public:
     void play();
     void stop();
     void setPosition(int64_t tick);  // song marker (SONG mode); jumps while playing
+    void setPatternPosition(int64_t tick);  // start position inside the pattern (PAT mode)
     void setTempo(float bpm);
     void setSwing(float amount);  // 0..1
     void noteOn(int32_t channel, int32_t pitch, int32_t velocity);
@@ -59,7 +60,8 @@ public:
     void unloadSample(int32_t id);
 
     // ---- Control thread: building the playback snapshot ----
-    void beginSnapshot(int32_t mode, int32_t currentPattern, int64_t songLength, int64_t loopStart, int64_t loopEnd);
+    void beginSnapshot(int32_t mode, int32_t currentPattern, int64_t songLength, int64_t loopStart, int64_t loopEnd,
+                       int64_t patternLoopStart = -1, int64_t patternLoopEnd = -1);
     // Returns the channel index, or -1 if no snapshot is being built.
     int32_t addChannel(int32_t type, int32_t sound, int32_t sampleId, const float* params, int32_t paramCount,
                        float volume, float pan, bool muted, bool solo, int32_t insert);
@@ -92,7 +94,7 @@ public:
 
 private:
     enum class CommandType : int32_t {
-        Play, Stop, SetPosition, SetTempo, SetSwing, NoteOn, NoteOff, PadHold, PadRelease,
+        Play, Stop, SetPosition, SetPatternPosition, SetTempo, SetSwing, NoteOn, NoteOff, PadHold, PadRelease,
         SetRepeatTicks, AllNotesOff, SetMasterGain, SetStemInsert,
     };
     struct Command {
@@ -178,6 +180,7 @@ private:
     PlayMode lastMode_ = PlayMode::Pattern;
     double tick_ = 0.0;       // position in ticks (pattern or song)
     double startTick_ = 0.0;  // song marker
+    double patternStart_ = 0.0;  // PAT-mode start position
     double freeTick_ = 0.0;   // always-running clock for note repeat while stopped
     float tempo_ = 140.f;
     float swing_ = 0.f;

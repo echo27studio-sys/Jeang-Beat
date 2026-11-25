@@ -277,7 +277,10 @@ private fun MixerBox(project: Project, channel: Channel, actions: PatternActions
 private fun StepRow(pattern: Pattern, channel: Channel, color: Color, playheadStep: Int?, actions: PatternActions, onSelect: () -> Unit) {
     val group = pattern.meter.stepsPerBeat
     Row(horizontalArrangement = Arrangement.spacedBy(STEP_GAP)) {
-        for (step in 0 until pattern.lengthSteps) {
+        // AUTO patterns show one extra (dimmed) bar: tapping there makes the pattern longer.
+        val shown = pattern.visibleSteps
+        for (step in 0 until shown) {
+            val ghost = step >= pattern.stepCount
             val note = pattern.stepNote(channel.id, step)
             val alt = (step / group) % 2 == 1
             val base = if (alt) Color(0xFF5B2F33) else Color(0xFF3B4150)
@@ -286,7 +289,7 @@ private fun StepRow(pattern: Pattern, channel: Channel, color: Color, playheadSt
                 Modifier
                     .size(width = STEP_W, height = 30.dp)
                     .clip(RoundedCornerShape(4.dp))
-                    .background(if (note != null) onColor.copy(alpha = 0.55f + 0.45f * note.velocity / 127f) else base)
+                    .background(if (note != null) onColor.copy(alpha = 0.55f + 0.45f * note.velocity / 127f) else if (ghost) base.copy(alpha = 0.35f) else base)
                     .then(if (step == playheadStep) Modifier.border(2.dp, JbColors.Accent, RoundedCornerShape(4.dp)) else Modifier)
                     .semantics {
                         role = Role.Checkbox
@@ -307,7 +310,7 @@ private fun StepRow(pattern: Pattern, channel: Channel, color: Color, playheadSt
 @Composable
 private fun MiniRoll(pattern: Pattern, channel: Channel, color: Color, playheadStep: Int?, onOpen: () -> Unit) {
     val notes = pattern.notesFor(channel.id)
-    val width = (STEP_W + STEP_GAP) * pattern.lengthSteps - STEP_GAP
+    val width = (STEP_W + STEP_GAP) * pattern.stepCount - STEP_GAP
     val lo = (notes.minOfOrNull { it.pitch } ?: 60) - 1
     val hi = (notes.maxOfOrNull { it.pitch } ?: 60) + 1
     Canvas(
@@ -319,7 +322,7 @@ private fun MiniRoll(pattern: Pattern, channel: Channel, color: Color, playheadS
             .clickable(onClick = onOpen),
     ) {
         val tickPx = size.width / pattern.lengthTicks
-        for (beat in 0..pattern.lengthSteps step pattern.meter.stepsPerBeat) {
+        for (beat in 0..pattern.stepCount step pattern.meter.stepsPerBeat) {
             val x = beat * pattern.stepTicks * tickPx
             drawLine(Color(0xFF2B303C), Offset(x, 0f), Offset(x, size.height), 1f)
         }
@@ -382,7 +385,7 @@ private fun GraphEditor(
             Box(Modifier.weight(1f).fillMaxHeight().horizontalScroll(scroll)) {
                 Canvas(
                     Modifier
-                        .size(width = (STEP_W + STEP_GAP) * pattern.lengthSteps, height = 64.dp)
+                        .size(width = (STEP_W + STEP_GAP) * pattern.visibleSteps, height = 64.dp)
                         .pointerInput(cellPx) {
                             awaitEachGesture {
                                 val down = awaitFirstDown()
@@ -391,7 +394,7 @@ private fun GraphEditor(
                                 fun apply(x: Float, y: Float, final: Boolean) {
                                     val step = (x / cellPx).toInt()
                                     val p = currentPattern
-                                    if (step !in 0 until p.lengthSteps || p.stepNote(currentChannel.id, step) == null) return
+                                    if (step !in 0 until p.visibleSteps || p.stepNote(currentChannel.id, step) == null) return
                                     val frac = (1f - y / size.height).coerceIn(0f, 1f)
                                     val def = currentChannel.instrument.defaultPitch
                                     actions.updateStepNote(currentChannel.id, step, final) { n: Note ->
@@ -418,7 +421,7 @@ private fun GraphEditor(
                 ) {
                     val h = size.height
                     if (mode != GraphMode.VELOCITY) drawLine(JbColors.Outline, Offset(0f, h / 2), Offset(size.width, h / 2), 1f)
-                    for (step in 0 until pattern.lengthSteps) {
+                    for (step in 0 until pattern.visibleSteps) {
                         val n = pattern.stepNote(channel.id, step) ?: continue
                         val x = step * cellPx + 2f
                         val w = cellPx - 4f - STEP_GAP.toPx()
@@ -449,3 +452,7 @@ internal fun panText(pan: Float): String = when {
     pan > 0.02f -> "R${(pan * 100).roundToInt()}"
     else -> "C"
 }
+
+/** Steps shown in the rack: the pattern, plus one extra bar for AUTO patterns. */
+internal val Pattern.visibleSteps: Int
+    get() = stepCount + if (lengthMode == com.jeangbeat.core.model.LengthMode.AUTO) meter.stepsPerBar else 0

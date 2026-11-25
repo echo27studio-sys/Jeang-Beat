@@ -33,7 +33,7 @@ fun Project.clearChannelEverywhere(channelId: Int): Project =
 /** FL Studio "Fill each N steps": puts a step on 0, N, 2N… (keeps off-grid notes). */
 fun Project.fillEachSteps(channelId: Int, every: Int): Project {
     if (every <= 0) return this
-    val steps = (0 until currentPattern.lengthSteps step every).toList()
+    val steps = (0 until currentPattern.stepCount step every).toList()
     return setChannelSteps(channelId, steps)
 }
 
@@ -69,7 +69,7 @@ fun Project.splitByChannel(patternId: Int): Project {
     var id = nextId
     val parts = used.map { ch ->
         Pattern(
-            id = id++, name = "${source.name} – ${ch.name}", lengthSteps = source.lengthSteps, stepTicks = source.stepTicks,
+            id = id++, name = "${source.name} – ${ch.name}", lengthSteps = source.lengthSteps, stepTicks = source.stepTicks, lengthMode = source.lengthMode,
             notes = mapOf(ch.id to source.notesFor(ch.id)), color = ch.color,
         )
     }

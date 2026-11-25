@@ -49,6 +49,7 @@ fun Project.addPatternClip(trackId: Int, startTick: Int, patternId: Int, lengthT
     val clip = Clip.PatternClip(
         id = nextId, trackId = trackId, startTick = startTick.coerceAtLeast(0),
         lengthTicks = (lengthTicks ?: pattern.lengthTicks).coerceAtLeast(1), patternId = patternId,
+        followsPattern = lengthTicks == null || lengthTicks == pattern.lengthTicks,
     )
     return copy(song = song.copy(clips = song.clips + clip), nextId = nextId + 1)
 }
@@ -71,8 +72,11 @@ fun Project.addAutomationClip(trackId: Int, startTick: Int, lengthTicks: Int, ta
 fun Project.moveClip(clipId: Int, startTick: Int, trackId: Int): Project =
     updateClip(clipId) { it.moved(startTick.coerceAtLeast(0), trackId) }
 
-fun Project.resizeClip(clipId: Int, lengthTicks: Int): Project =
-    updateClip(clipId) { it.withLength(lengthTicks.coerceAtLeast(1)) }
+/** Resizing a pattern clip by hand stops it following the pattern's length. */
+fun Project.resizeClip(clipId: Int, lengthTicks: Int): Project = updateClip(clipId) {
+    val c = it.withLength(lengthTicks.coerceAtLeast(1))
+    if (c is Clip.PatternClip) c.copy(followsPattern = false) else c
+}
 
 fun Project.deleteClip(clipId: Int): Project = updateSong { s -> s.copy(clips = s.clips.filterNot { it.id == clipId }) }
 
@@ -96,8 +100,8 @@ fun Project.sliceClip(clipId: Int, atTick: Int): Project {
     val leftLen = atTick - c.startTick
     val rightLen = c.endTick - atTick
     val (left, right) = when (c) {
-        is Clip.PatternClip -> c.copy(lengthTicks = leftLen) to
-            c.copy(id = nextId, startTick = atTick, lengthTicks = rightLen, offsetTicks = c.offsetTicks + leftLen)
+        is Clip.PatternClip -> c.copy(lengthTicks = leftLen, followsPattern = false) to
+            c.copy(id = nextId, startTick = atTick, lengthTicks = rightLen, offsetTicks = c.offsetTicks + leftLen, followsPattern = false)
         is Clip.AudioClip -> c.copy(lengthTicks = leftLen) to
             c.copy(id = nextId, startTick = atTick, lengthTicks = rightLen, offsetTicks = c.offsetTicks + leftLen)
         is Clip.AutomationClip -> {

@@ -36,6 +36,8 @@ sealed interface Clip {
         /** Where inside the pattern the clip starts (after slicing). */
         val offsetTicks: Int = 0,
         override val muted: Boolean = false,
+        /** True: the clip grows/shrinks with an auto-length pattern. False once resized by hand. */
+        val followsPattern: Boolean = true,
     ) : Clip
 
     /** Plays an imported audio file, e.g. a vocal. */

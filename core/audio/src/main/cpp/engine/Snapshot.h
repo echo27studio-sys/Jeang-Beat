@@ -107,7 +107,8 @@ struct Snapshot {
     PlayMode mode = PlayMode::Pattern;
     int32_t currentPattern = 0;
     int64_t songLength = 16 * kTicksPerStep;
-    int64_t loopStart = -1, loopEnd = -1;
+    int64_t loopStart = -1, loopEnd = -1;          // song loop (SONG mode)
+    int64_t patternLoopStart = -1, patternLoopEnd = -1;  // piano-roll loop (PAT mode)
     std::vector<ChannelData> channels;
     std::vector<PatternData> patterns;
     std::vector<ClipData> clips;
