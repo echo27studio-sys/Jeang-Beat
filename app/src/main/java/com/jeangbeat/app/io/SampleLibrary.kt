@@ -8,7 +8,7 @@ import com.jeangbeat.core.data.AudioData
 import com.jeangbeat.core.data.WavFile
 import com.jeangbeat.core.model.SampleRef
 import java.io.File
-import java.util.UUID
+import java.security.MessageDigest
 import kotlin.math.abs
 
 /**
@@ -19,16 +19,41 @@ class SampleLibrary(private val context: Context) {
     val dir: File = File(context.filesDir, "samples").apply { mkdirs() }
 
     /**
-     * Decodes [uri] and stores it. Returns the ref (id 0; the project assigns the real id)
-     * and the decoded audio, so callers don't read the file back.
+     * Copies [uri] into the store and returns the ref (id 0; the project assigns
+     * the real id) and the decoded audio. Files are named after a hash of their
+     * content, so importing or dragging in the same file again reuses the stored
+     * copy instead of making a duplicate.
      */
-    fun import(uri: Uri): Pair<SampleRef, SampleData> {
-        val audio = AudioCodec.decode(context, uri)
-        val name = displayName(uri)?.substringBeforeLast('.')?.take(40) ?: "Audio"
-        val fileName = "${UUID.randomUUID()}.wav"
-        WavFile.write(File(dir, fileName), audio, bits = 24)
-        val ref = SampleRef(0, name, fileName, audio.frames.toLong(), audio.sampleRate, audio.channels)
+    fun import(uri: Uri, name: String? = null): Pair<SampleRef, SampleData> {
+        val label = (name ?: displayName(uri)?.substringBeforeLast('.'))?.take(40) ?: "Audio"
+        val fileName = "s_${contentHash(uri)}.wav"
+        val file = File(dir, fileName)
+        val audio = if (file.exists()) {
+            runCatching { WavFile.read(file) }.getOrNull()
+        } else {
+            null
+        } ?: AudioCodec.decode(context, uri).also { decoded ->
+            // Write to a temporary name first so a half-written file is never reused.
+            val tmp = File(dir, "$fileName.tmp")
+            WavFile.write(tmp, decoded, bits = 24)
+            if (!tmp.renameTo(file)) tmp.delete()
+        }
+        val ref = SampleRef(0, label, fileName, audio.frames.toLong(), audio.sampleRate, audio.channels)
         return ref to SampleData(audio.samples, audio.channels, audio.sampleRate)
+    }
+
+    /** First 128 bits of the SHA-256 of the file, as hex. */
+    private fun contentHash(uri: Uri): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        context.contentResolver.openInputStream(uri)?.use { input ->
+            val buf = ByteArray(1 shl 16)
+            while (true) {
+                val n = input.read(buf)
+                if (n < 0) break
+                digest.update(buf, 0, n)
+            }
+        } ?: throw java.io.IOException("Cannot open $uri")
+        return digest.digest().take(16).joinToString("") { "%02x".format(it) }
     }
 
     fun load(ref: SampleRef): SampleData? = runCatching {

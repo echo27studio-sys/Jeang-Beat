@@ -26,6 +26,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.jeangbeat.core.ui.sampleDropTarget
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -72,6 +73,9 @@ interface PatternActions {
     fun setChannelSteps(channelId: Int, steps: List<Int>)
     fun rotateChannel(channelId: Int, steps: Int, final: Boolean)
 
+    /** Browser drop: on a channel row ([channelId]) replaces its sound, elsewhere adds a channel. */
+    fun drop(item: com.jeangbeat.core.ui.Dropped, channelId: Int?): Boolean = false
+
     // ---- 3.0 channel menu ----
     fun renameChannel(channelId: Int)
     fun setChannelColor(channelId: Int, color: Int)
@@ -109,7 +113,7 @@ fun PatternScreen(
     val pattern = project.currentPattern
     val playheadStep = playheadTick?.let { (it / pattern.stepTicks).toInt() }
 
-    Column(modifier.fillMaxSize()) {
+    Column(modifier.fillMaxSize().sampleDropTarget { item, _ -> actions.drop(item, null) }) {
         Row(
             Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,

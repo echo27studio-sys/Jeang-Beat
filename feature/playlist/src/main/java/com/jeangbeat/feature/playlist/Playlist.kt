@@ -40,6 +40,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.jeangbeat.core.ui.sampleDropTarget
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -108,6 +109,9 @@ interface PlaylistActions {
     fun addAutomation()
     fun setClipInsert(clipId: Int, insert: Int)
     fun setSnap(snap: Snap)
+
+    /** Browser drop on a lane; [trackId] -1 means below the last track (a new track). [tick] is snapped. */
+    fun drop(item: com.jeangbeat.core.ui.Dropped, trackId: Int, tick: Int): Boolean = false
 }
 
 enum class PlaylistTool { DRAW, PAINT, SELECT, SLICE, DELETE, MUTE }
@@ -188,7 +192,15 @@ fun Playlist(
                     contentAlignment = Alignment.Center,
                 ) { Icon(Icons.Default.Add, stringResource(R.string.add_track), tint = JbColors.Accent) }
             }
-            BoxWithConstraints(Modifier.weight(1f).fillMaxHeight()) {
+            BoxWithConstraints(
+                Modifier.weight(1f).fillMaxHeight().sampleDropTarget { item, at ->
+                    val x = at.x + hScroll.value
+                    val y = at.y + vScroll.value
+                    val track = song.tracks.getOrNull((y / trackPx).toInt())
+                    val tick = Timing.floorTo((x / tickPx).toInt().coerceAtLeast(0), snap.ticks)
+                    actions.drop(item, track?.id ?: -1, tick)
+                },
+            ) {
                 val contentW = with(density) { (totalTicks * tickPx).toDp() }.coerceAtLeast(maxWidth)
                 val contentH = (TRACK_HEIGHT * (song.tracks.size + 1)).coerceAtLeast(maxHeight)
                 Lanes(

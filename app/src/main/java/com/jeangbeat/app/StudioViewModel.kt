@@ -85,6 +85,12 @@ import com.jeangbeat.core.model.updatePlaylistTrack
 import com.jeangbeat.core.model.updateStepNote
 import com.jeangbeat.core.model.withSwing
 import com.jeangbeat.core.model.withTempo
+import com.jeangbeat.core.model.DropItem
+import com.jeangbeat.core.model.DropTarget
+import com.jeangbeat.core.model.dropItem
+import com.jeangbeat.core.model.sampleIdFor
+import com.jeangbeat.core.ui.Dropped
+import com.jeangbeat.app.browser.BrowserItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -190,6 +196,7 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun onForeground() {
+        browser.refresh()
         val ok = engine.start()
         pushToEngine()
         _state.update { it.copy(audioOk = ok) }
@@ -197,6 +204,7 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun onBackground() {
+        previewer.stop()
         stop()
         engine.pause()
         saveNow()
@@ -641,6 +649,96 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
                 }
             }
             message(UiR.string.audio_imported)
+        }
+    }
+
+    // ---- Browser (3.0) -------------------------------------------------------------------
+
+    val browser = app.browser
+    private val previewer = com.jeangbeat.app.browser.SamplePreviewer(application)
+
+    var autoPreview: Boolean
+        get() = settings.autoPreview
+        set(value) { settings.autoPreview = value }
+
+    /** Plays a Browser item: a file through the system player, a built-in sound through the engine. */
+    fun preview(item: BrowserItem) {
+        when (item) {
+            is BrowserItem.File -> previewer.play(browser.uriOf(item.sample))
+            is BrowserItem.ProjectSample -> {
+                previewer.stop()
+                project.channels.firstOrNull { (it.instrument as? Instrument.Sampler)?.sampleId == item.ref.id }?.let { previewChannel(it.id) }
+            }
+            is BrowserItem.Sound -> {
+                previewer.stop()
+                // Borrow a channel with the same instrument if there is one; otherwise just add it on drop.
+                project.channels.firstOrNull { it.instrument == item.instrument }?.let { previewChannel(it.id) }
+            }
+        }
+    }
+
+    fun stopPreview() = previewer.stop()
+
+    /** "Add to channel rack" from the Browser menu. */
+    fun addFromBrowser(item: BrowserItem) = drop(item, DropTarget.NewChannel)
+
+    /** "Add to Playlist at the song marker": first track that is free there. */
+    fun addToPlaylistFromBrowser(item: BrowserItem) {
+        val start = _state.value.songPosition
+        val p = project
+        val track = p.song.tracks.firstOrNull { t -> p.song.clips.none { it.trackId == t.id && it.startTick < start + Timing.TICKS_PER_BAR && it.endTick > start } }?.id ?: -1
+        drop(item, DropTarget.PlaylistLane(track, start))
+    }
+
+    /** A drop from the Browser (or another app) onto a screen. */
+    fun drop(dropped: Dropped, target: DropTarget): Boolean {
+        when (dropped) {
+            is Dropped.Internal -> (dropped.item as? BrowserItem)?.let { drop(it, target) } ?: return false
+            is Dropped.External -> dropped.uris.forEachIndexed { i, uri ->
+                // Several files on the Playlist go on consecutive tracks.
+                val t = if (i > 0 && target is DropTarget.PlaylistLane) target.copy(trackId = -1) else target
+                importAndDrop(uri, null, t)
+            }
+        }
+        return true
+    }
+
+    private fun drop(item: BrowserItem, target: DropTarget) {
+        previewer.stop()
+        when (item) {
+            is BrowserItem.Sound -> {
+                if (target is DropTarget.PlaylistLane) {
+                    message(UiR.string.drop_sound_on_playlist)
+                    return
+                }
+                edit { it.dropItem(DropItem.Sound(item.label, item.instrument), target) }
+            }
+            is BrowserItem.ProjectSample -> edit { it.dropItem(DropItem.Sample(item.ref), target) }
+            is BrowserItem.File -> {
+                browser.markRecent(item.sample.key2)
+                importAndDrop(browser.uriOf(item.sample), item.sample.name, target)
+            }
+        }
+    }
+
+    /** Copies the file into the sample store (once per content), loads it and applies the drop. */
+    private fun importAndDrop(uri: Uri, name: String?, target: DropTarget) {
+        _state.update { it.copy(busy = true) }
+        viewModelScope.launch {
+            val result = withContext(Dispatchers.IO) { runCatching { samples.import(uri, name) } }
+            _state.update { it.copy(busy = false) }
+            val (ref, data) = result.getOrElse {
+                message(UiR.string.import_failed)
+                return@launch
+            }
+            val id = project.sampleIdFor(ref)
+            if (!engine.isSampleLoaded(id) || project.sample(id) == null) {
+                engine.loadSample(id, data.samples, data.channels, data.sampleRate)
+                _state.update { it.copy(waveforms = it.waveforms + (id to samples.peaks(data))) }
+            }
+            val before = project
+            edit { it.dropItem(DropItem.Sample(ref), target) }
+            if (project === before) message(UiR.string.drop_failed)
         }
     }
 

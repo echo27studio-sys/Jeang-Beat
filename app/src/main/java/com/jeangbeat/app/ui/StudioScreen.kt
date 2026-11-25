@@ -1,6 +1,11 @@
 package com.jeangbeat.app.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import com.jeangbeat.core.model.DropTarget
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -103,6 +108,10 @@ fun StudioScreen(viewModel: StudioViewModel, files: FileActions, onLanguageChang
     var showAutomationPicker by rememberSaveable { mutableStateOf(false) }
     var automationClipId by rememberSaveable { mutableStateOf<Int?>(null) }
     var rename by remember { mutableStateOf<RenameRequest?>(null) }
+    var showBrowser by rememberSaveable { mutableStateOf(false) }
+    // Once opened on a phone, the Browser stays composed (off screen) so a drag that hides it keeps going.
+    var browserComposed by rememberSaveable { mutableStateOf(false) }
+    if (showBrowser) browserComposed = true
 
     var replaceChannelId by rememberSaveable { mutableStateOf<Int?>(null) }
     LaunchedEffect(Unit) {
@@ -164,6 +173,8 @@ fun StudioScreen(viewModel: StudioViewModel, files: FileActions, onLanguageChang
                 onSaveAs = { viewModel.refreshProjects(); showProjects = true },
                 files = files,
                 onLanguageChange = onLanguageChange,
+                browserOpen = showBrowser,
+                onToggleBrowser = { showBrowser = !showBrowser },
             )
             Row(Modifier.weight(1f).fillMaxWidth()) {
                 if (landscape) {
@@ -177,6 +188,13 @@ fun StudioScreen(viewModel: StudioViewModel, files: FileActions, onLanguageChang
                         }
                     }
                 }
+                if (landscape && showBrowser) {
+                    // Tablet / landscape: docked on the left like FL Studio.
+                    BrowserPanel(
+                        viewModel, state.project, onAddFolder = files::pickFolder, onClose = { showBrowser = false }, onDragStart = {},
+                        modifier = Modifier.width(300.dp).fillMaxHeight(),
+                    )
+                }
                 Box(Modifier.weight(1f).fillMaxHeight()) {
                     TabContent(
                         state, viewModel, songTick, patternTick, meters, patternNameFor,
@@ -188,6 +206,18 @@ fun StudioScreen(viewModel: StudioViewModel, files: FileActions, onLanguageChang
                         onEditAutomation = { automationClipId = it },
                         files = files,
                     )
+                    if (!landscape && browserComposed) {
+                        // Phone: a drawer over the screen that slides away when a drag starts.
+                        if (showBrowser) {
+                            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f)).clickable(interactionSource = null, indication = null) { showBrowser = false })
+                        }
+                        BrowserPanel(
+                            viewModel, state.project, onAddFolder = files::pickFolder, onClose = { showBrowser = false },
+                            onDragStart = { showBrowser = false },
+                            modifier = Modifier.fillMaxWidth(0.88f).fillMaxHeight()
+                                .graphicsLayer { translationX = if (showBrowser) 0f else -size.width - 40f },
+                        )
+                    }
                 }
             }
             if (!landscape) {
@@ -369,6 +399,7 @@ private fun patternActions(
     override fun setSwing(amount: Float, final: Boolean) = vm.setSwing(amount, final)
     override fun setChannelSteps(channelId: Int, steps: List<Int>) = vm.setChannelSteps(channelId, steps)
     override fun rotateChannel(channelId: Int, steps: Int, final: Boolean) = vm.rotateChannel(channelId, steps, final)
+    override fun drop(item: com.jeangbeat.core.ui.Dropped, channelId: Int?) = vm.drop(item, channelId?.let { DropTarget.Channel(it) } ?: DropTarget.NewChannel)
 }
 
 private fun pianoRollActions(vm: StudioViewModel, channelId: Int) = object : PianoRollActions {
@@ -386,6 +417,7 @@ private fun pianoRollActions(vm: StudioViewModel, channelId: Int) = object : Pia
     override fun setPosition(tick: Int) = vm.setPatternPosition(tick)
     override fun setLoop(startTick: Int, endTick: Int) = vm.setRollLoop(startTick, endTick)
     override fun clearLoop() = vm.clearRollLoop()
+    override fun drop(item: com.jeangbeat.core.ui.Dropped) = vm.drop(item, DropTarget.Channel(channelId))
 }
 
 private fun playlistActions(
@@ -428,6 +460,7 @@ private fun playlistActions(
     override fun addAutomation() = onAutomationPicker()
     override fun setClipInsert(clipId: Int, insert: Int) = vm.setClipInsert(clipId, insert)
     override fun setSnap(snap: Snap) = vm.setPlaylistSnap(snap)
+    override fun drop(item: com.jeangbeat.core.ui.Dropped, trackId: Int, tick: Int) = vm.drop(item, DropTarget.PlaylistLane(trackId, tick))
 }
 
 private fun mixerActions(vm: StudioViewModel, onRename: (Int) -> Unit) = object : MixerActions {
@@ -446,6 +479,7 @@ private fun mixerActions(vm: StudioViewModel, onRename: (Int) -> Unit) = object 
     override fun setSend(from: Int, to: Int, level: Float, final: Boolean) = vm.setSend(from, to, level, final)
     override fun setToMaster(track: Int, on: Boolean) = vm.setToMaster(track, on)
     override fun automate(target: AutomationTarget, value: Float) = vm.automate(target, value)
+    override fun drop(item: com.jeangbeat.core.ui.Dropped, insert: Int) = vm.drop(item, DropTarget.MixerInsert(insert))
 }
 
 

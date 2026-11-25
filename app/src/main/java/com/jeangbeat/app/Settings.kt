@@ -23,7 +23,13 @@ class Settings(context: Context) {
         get() = prefs.getString(KEY_LAST_PROJECT, null)
         set(value) = prefs.edit().putString(KEY_LAST_PROJECT, value).apply()
 
+    /** Browser: play a file as soon as it is tapped. */
+    var autoPreview: Boolean
+        get() = prefs.getBoolean(KEY_AUTO_PREVIEW, true)
+        set(value) = prefs.edit().putBoolean(KEY_AUTO_PREVIEW, value).apply()
+
     companion object {
+        private const val KEY_AUTO_PREVIEW = "browser_auto_preview"
         private const val KEY_LANGUAGE = "language"
         private const val KEY_LAST_PROJECT = "last_project"
 

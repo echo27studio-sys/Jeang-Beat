@@ -38,6 +38,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import com.jeangbeat.core.ui.sampleDropTarget
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -93,6 +94,9 @@ interface MixerActions {
 
     /** Adds an automation clip for [target] to the Playlist, starting at [value] (0..1). */
     fun automate(target: AutomationTarget, value: Float)
+
+    /** Browser drop on a strip: a new channel routed to [insert]. */
+    fun drop(item: com.jeangbeat.core.ui.Dropped, insert: Int): Boolean = false
 }
 
 private enum class PanelTab { EFFECTS, ROUTING }
@@ -155,6 +159,7 @@ private fun Strip(project: Project, t: MixerTrack, meterL: Float, meterR: Float,
             .clip(RoundedCornerShape(8.dp))
             .background(if (t.isMaster) Color(0xFF1E1A10) else JbColors.Surface)
             .then(if (selected) Modifier.border(2.dp, JbColors.Accent, RoundedCornerShape(8.dp)) else Modifier)
+            .sampleDropTarget { item, _ -> actions.drop(item, t.index) }
             .pointerInput(t.index) { detectTapGestures(onTap = { onSelect() }, onLongPress = { actions.rename(t.index) }) }
             .padding(4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,

@@ -45,6 +45,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.jeangbeat.core.ui.sampleDropTarget
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -123,6 +124,9 @@ interface PianoRollActions {
     fun setPosition(tick: Int)
     fun setLoop(startTick: Int, endTick: Int)
     fun clearLoop()
+
+    /** Browser drop: replaces the open channel's sound. */
+    fun drop(item: com.jeangbeat.core.ui.Dropped): Boolean = false
 }
 
 enum class RollTool { DRAW, PAINT, SELECT, SLICE, DELETE, MUTE, SLIDE }
@@ -179,7 +183,7 @@ fun PianoRoll(
     val sel = selection
     fun applyToSelection(transform: (List<Note>, Set<NoteKey>) -> List<Note>) = actions.editNotes(true) { transform(it, sel) }
 
-    Column(modifier.fillMaxSize()) {
+    Column(modifier.fillMaxSize().sampleDropTarget { item, _ -> actions.drop(item) }) {
         // ---- title bar ----
         Row(
             Modifier.fillMaxWidth().background(JbColors.Surface).padding(horizontal = 4.dp, vertical = 2.dp),

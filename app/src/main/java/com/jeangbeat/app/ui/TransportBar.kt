@@ -18,6 +18,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Folder
@@ -65,6 +66,9 @@ interface FileActions {
     fun exportAudio(options: com.jeangbeat.app.io.ExportOptions)
     fun exportProject()
     fun importProject()
+
+    /** Links a sample folder to the Browser (system folder picker). */
+    fun pickFolder()
 }
 
 @Composable
@@ -78,6 +82,8 @@ fun TransportBar(
     onSaveAs: () -> Unit,
     files: FileActions,
     onLanguageChange: (AppLanguage) -> Unit,
+    browserOpen: Boolean = false,
+    onToggleBrowser: () -> Unit = {},
 ) {
     var showTempo by remember { mutableStateOf(false) }
     Row(
@@ -85,6 +91,13 @@ fun TransportBar(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
+        // FL Studio-style Browser toggle (sound packs / linked folders).
+        IconButton(onClick = onToggleBrowser) {
+            Icon(
+                Icons.Default.LibraryMusic, stringResource(R.string.browser),
+                tint = if (browserOpen) JbColors.Accent else JbColors.Text,
+            )
+        }
         Box(
             Modifier.size(44.dp).clip(CircleShape).background(if (state.isPlaying) JbColors.Text else JbColors.Accent).clickable { viewModel.togglePlay() },
             contentAlignment = Alignment.Center,

@@ -13,11 +13,14 @@ class JeangBeatApp : Application() {
         private set
     lateinit var settings: Settings
         private set
+    lateinit var browser: com.jeangbeat.app.browser.BrowserRepository
+        private set
 
     override fun onCreate() {
         super.onCreate()
         engine = AudioEngine()
         store = ProjectStore(File(filesDir, "projects"))
         settings = Settings(this)
+        browser = com.jeangbeat.app.browser.BrowserRepository(this).also { it.load() }
     }
 }

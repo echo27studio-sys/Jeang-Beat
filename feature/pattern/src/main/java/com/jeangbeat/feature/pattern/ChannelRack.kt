@@ -32,6 +32,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.jeangbeat.core.ui.sampleDropTarget
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -123,7 +124,7 @@ private fun RackRow(
 ) {
     val color = JbColors.channel(channel.color)
     Row(
-        Modifier.fillMaxWidth().height(ROW_H).padding(start = 4.dp, end = 4.dp),
+        Modifier.fillMaxWidth().height(ROW_H).sampleDropTarget { item, _ -> actions.drop(item, channel.id) }.padding(start = 4.dp, end = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         MuteLed(

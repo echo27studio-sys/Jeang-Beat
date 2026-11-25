@@ -34,6 +34,9 @@ class MainActivity : ComponentActivity(), FileActions {
     private val createBundle = registerForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { uri: Uri? ->
         uri?.let(viewModel::exportProject)
     }
+    private val openFolder = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri: Uri? ->
+        uri?.let(viewModel.browser::addFolder)
+    }
     private val openBundle = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
         uri?.let(viewModel::importProject)
     }
@@ -106,6 +109,8 @@ class MainActivity : ComponentActivity(), FileActions {
     override fun exportProject() = createBundle.launch(fileBase() + ProjectBundle.EXTENSION)
 
     override fun importProject() = openBundle.launch(arrayOf("*/*"))
+
+    override fun pickFolder() = openFolder.launch(null)
 
     private fun startExport(uri: Uri) = viewModel.exportAudio(uri, exportOptions)
 
