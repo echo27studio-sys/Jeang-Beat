@@ -43,6 +43,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.jeangbeat.app.AppLanguage
 import com.jeangbeat.app.AudioTarget
+import com.jeangbeat.app.MessageAction
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarResult
 import com.jeangbeat.app.StudioState
 import com.jeangbeat.app.StudioTab
 import com.jeangbeat.app.StudioViewModel
@@ -81,6 +84,9 @@ private sealed interface RenameRequest {
     data class Track(val id: Int) : RenameRequest
     data class Insert(val index: Int) : RenameRequest
     data class MakeUnique(val clipId: Int) : RenameRequest
+    data class Channel(val id: Int) : RenameRequest
+    data class CloneChannel(val id: Int) : RenameRequest
+    data object NewProject : RenameRequest
 }
 
 @Composable
@@ -96,7 +102,25 @@ fun StudioScreen(viewModel: StudioViewModel, files: FileActions, onLanguageChang
     var automationClipId by rememberSaveable { mutableStateOf<Int?>(null) }
     var rename by remember { mutableStateOf<RenameRequest?>(null) }
 
-    LaunchedEffect(Unit) { viewModel.messages.collect { snackbar.showSnackbar(context.getString(it)) } }
+    var replaceChannelId by rememberSaveable { mutableStateOf<Int?>(null) }
+    LaunchedEffect(Unit) {
+        viewModel.messages.collect { m ->
+            val text = context.getString(m.text, *m.args.toTypedArray())
+            val result = snackbar.showSnackbar(
+                text,
+                actionLabel = m.actionLabel?.let(context::getString),
+                withDismissAction = m.action != null,
+                duration = if (m.action != null) SnackbarDuration.Long else SnackbarDuration.Short,
+            )
+            if (result == SnackbarResult.ActionPerformed) {
+                when (val a = m.action) {
+                    MessageAction.Undo -> viewModel.undo()
+                    is MessageAction.Share -> shareFile(context, a.uri, a.mime)
+                    null -> Unit
+                }
+            }
+        }
+    }
 
     // Engine position, polled once per frame while playing.
     var position by remember { mutableFloatStateOf(0f) }
@@ -130,7 +154,15 @@ fun StudioScreen(viewModel: StudioViewModel, files: FileActions, onLanguageChang
     BoxWithConstraints(Modifier.fillMaxSize().background(JbColors.Background)) {
         val landscape = maxWidth > maxHeight
         Column(Modifier.fillMaxSize()) {
-            TransportBar(state, displayTick, viewModel, { viewModel.refreshProjects(); showProjects = true }, { showExport = true }, files, onLanguageChange)
+            TransportBar(
+                state, displayTick, viewModel,
+                onOpenProjects = { viewModel.refreshProjects(); showProjects = true },
+                onExportAudio = { showExport = true },
+                onNewProject = { rename = RenameRequest.NewProject },
+                onSaveAs = { viewModel.refreshProjects(); showProjects = true },
+                files = files,
+                onLanguageChange = onLanguageChange,
+            )
             Row(Modifier.weight(1f).fillMaxWidth()) {
                 if (landscape) {
                     NavigationRail(containerColor = JbColors.Surface, modifier = Modifier.fillMaxHeight()) {
@@ -149,6 +181,7 @@ fun StudioScreen(viewModel: StudioViewModel, files: FileActions, onLanguageChang
                         onSettings = { settingsChannelId = it },
                         onAddChannel = { showAddChannel = true },
                         onRename = { rename = it },
+                        onReplace = { replaceChannelId = it },
                         onAutomationPicker = { showAutomationPicker = true },
                         onEditAutomation = { automationClipId = it },
                         files = files,
@@ -186,7 +219,24 @@ fun StudioScreen(viewModel: StudioViewModel, files: FileActions, onLanguageChang
         )
     }
     if (showProjects) ProjectsDialog(state, viewModel, files) { showProjects = false }
-    if (showExport) ExportDialog(state.mode, onExport = { mode, format -> showExport = false; files.exportAudio(mode, format) }, onDismiss = { showExport = false })
+    if (showExport) {
+        ExportDialog(
+            state.mode,
+            onExport = { mode, format, toMusic ->
+                showExport = false
+                val base = state.project.name.replace(Regex("[\\\\/:*?\"<>|]"), "_").ifBlank { "Jeang Beat" }
+                if (!toMusic || !viewModel.exportToMediaStore(mode, format, base)) files.exportAudio(mode, format)
+            },
+            onDismiss = { showExport = false },
+        )
+    }
+    replaceChannelId?.let { id ->
+        AddChannelDialog(
+            onAdd = { _, instrument -> viewModel.replaceInstrument(id, instrument); replaceChannelId = null },
+            onImport = { replaceChannelId = null; files.pickAudio(AudioTarget.CHANNEL) },
+            onDismiss = { replaceChannelId = null },
+        )
+    }
     state.exportProgress?.let { ExportProgressDialog(it, viewModel::cancelExport) }
     if (showAutomationPicker) {
         AutomationTargetDialog(state.project, onPick = { target, value -> showAutomationPicker = false; viewModel.automate(target, value) }) { showAutomationPicker = false }
@@ -209,6 +259,9 @@ fun StudioScreen(viewModel: StudioViewModel, files: FileActions, onLanguageChang
             is RenameRequest.Insert -> stringResource(R.string.rename) to (state.project.mixer.track(r.index)?.name ?: "")
             is RenameRequest.MakeUnique -> stringResource(R.string.make_unique) to
                 ((state.project.song.clip(r.clipId) as? Clip.PatternClip)?.let { state.project.pattern(it.patternId)?.name + " 2" } ?: "")
+            is RenameRequest.Channel -> stringResource(R.string.rename) to (state.project.channel(r.id)?.name ?: "")
+            is RenameRequest.CloneChannel -> stringResource(R.string.clone_channel) to ((state.project.channel(r.id)?.name ?: "") + " 2")
+            RenameRequest.NewProject -> stringResource(R.string.new_project) to stringResource(R.string.untitled)
         }
         TextInputDialog(title, initial, onConfirm = { name ->
             when (r) {
@@ -216,6 +269,9 @@ fun StudioScreen(viewModel: StudioViewModel, files: FileActions, onLanguageChang
                 is RenameRequest.Track -> viewModel.renameTrack(r.id, name)
                 is RenameRequest.Insert -> viewModel.renameMixerTrack(r.index, name)
                 is RenameRequest.MakeUnique -> viewModel.makeUnique(r.clipId, name)
+                is RenameRequest.Channel -> viewModel.renameChannel(r.id, name)
+                is RenameRequest.CloneChannel -> viewModel.cloneChannel(r.id, name)
+                RenameRequest.NewProject -> viewModel.newProject(name, context.getString(R.string.pattern_default_name, 1), withDemo = false)
             }
             rename = null
         }, onDismiss = { rename = null })
@@ -233,6 +289,7 @@ private fun TabContent(
     onSettings: (Int) -> Unit,
     onAddChannel: () -> Unit,
     onRename: (RenameRequest) -> Unit,
+    onReplace: (Int) -> Unit,
     onAutomationPicker: () -> Unit,
     onEditAutomation: (Int) -> Unit,
     files: FileActions,
@@ -247,7 +304,7 @@ private fun TabContent(
                 val actions = remember(vm, rollChannel.id) { pianoRollActions(vm, rollChannel.id) }
                 PianoRoll(rollChannel, pattern, ghosts, project.scale, state.rollSnap, patternTick, state.isPlaying && state.mode == PlayMode.PATTERN, actions)
             } else {
-                val actions = remember(vm) { patternActions(vm, onSettings, onAddChannel, { onRename(RenameRequest.Pattern(it)) }, patternNameFor) }
+                val actions = remember(vm) { patternActions(vm, onSettings, onAddChannel, onRename, onReplace, patternNameFor) }
                 PatternScreen(project, patternTick, actions)
             }
         }
@@ -266,9 +323,22 @@ private fun patternActions(
     vm: StudioViewModel,
     onSettings: (Int) -> Unit,
     onAddChannel: () -> Unit,
-    onRename: (Int) -> Unit,
+    onRename: (RenameRequest) -> Unit,
+    onReplace: (Int) -> Unit,
     patternNameFor: (Int) -> String,
 ) = object : PatternActions {
+    override fun renameChannel(channelId: Int) = onRename(RenameRequest.Channel(channelId))
+    override fun setChannelColor(channelId: Int, color: Int) = vm.setChannelColor(channelId, color)
+    override fun cloneChannel(channelId: Int) = onRename(RenameRequest.CloneChannel(channelId))
+    override fun deleteChannel(channelId: Int) = vm.deleteChannel(channelId)
+    override fun clearChannel(channelId: Int, allPatterns: Boolean) = vm.clearChannel(channelId, allPatterns)
+    override fun moveChannel(channelId: Int, delta: Int) = vm.moveChannel(channelId, delta)
+    override fun fillSteps(channelId: Int, every: Int) = vm.fillSteps(channelId, every)
+    override fun shiftSteps(channelId: Int, delta: Int) = vm.shiftSteps(channelId, delta)
+    override fun randomizeVelocity(channelId: Int) = vm.randomizeVelocity(channelId)
+    override fun replaceInstrument(channelId: Int) = onReplace(channelId)
+    override fun setPatternColor(color: Int) = vm.setPatternColor(color)
+    override fun splitByChannel() = vm.splitByChannel()
     override fun toggleStep(channelId: Int, step: Int) = vm.toggleStep(channelId, step)
     override fun updateStepNote(channelId: Int, step: Int, final: Boolean, transform: (Note) -> Note) = vm.updateStepNote(channelId, step, final, transform)
     override fun toggleMute(channelId: Int) = vm.toggleMute(channelId)
@@ -282,7 +352,7 @@ private fun patternActions(
     override fun addChannel() = onAddChannel()
     override fun selectPattern(patternId: Int) = vm.selectPattern(patternId)
     override fun newPattern(copyCurrent: Boolean) = vm.addPattern(patternNameFor(vm.state.value.project.patterns.size + 1), copyCurrent)
-    override fun renamePattern() = onRename(vm.state.value.project.currentPatternId)
+    override fun renamePattern() = onRename(RenameRequest.Pattern(vm.state.value.project.currentPatternId))
     override fun deletePattern() = vm.deletePattern()
     override fun setPatternBars(bars: Int) = vm.setPatternBars(bars)
     override fun setMeter(meter: Meter) = vm.setMeter(meter)
@@ -363,4 +433,15 @@ private fun mixerActions(vm: StudioViewModel, onRename: (Int) -> Unit) = object 
     override fun setSend(from: Int, to: Int, level: Float, final: Boolean) = vm.setSend(from, to, level, final)
     override fun setToMaster(track: Int, on: Boolean) = vm.setToMaster(track, on)
     override fun automate(target: AutomationTarget, value: Float) = vm.automate(target, value)
+}
+
+
+/** Opens the Android share sheet for an exported file (also lets the user "open with" a player). */
+internal fun shareFile(context: android.content.Context, uri: android.net.Uri, mime: String) {
+    val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+        type = mime
+        putExtra(android.content.Intent.EXTRA_STREAM, uri)
+        addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    }
+    runCatching { context.startActivity(android.content.Intent.createChooser(send, null).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
 }

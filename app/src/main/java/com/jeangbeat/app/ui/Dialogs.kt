@@ -303,9 +303,11 @@ fun ProjectsDialog(state: StudioState, viewModel: StudioViewModel, files: FileAc
 
 
 @Composable
-fun ExportDialog(mode: PlayMode, onExport: (PlayMode, ExportFormat) -> Unit, onDismiss: () -> Unit) {
+fun ExportDialog(mode: PlayMode, onExport: (PlayMode, ExportFormat, Boolean) -> Unit, onDismiss: () -> Unit) {
     var what by remember { mutableStateOf(mode) }
     var format by remember { mutableStateOf(ExportFormat.WAV16) }
+    val canMusic = com.jeangbeat.app.io.MediaStoreFiles.supported
+    var toMusic by remember { mutableStateOf(canMusic) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.export_audio)) },
@@ -331,9 +333,20 @@ fun ExportDialog(mode: PlayMode, onExport: (PlayMode, ExportFormat) -> Unit, onD
                         Text(stringResource(label))
                     }
                 }
+                if (canMusic) {
+                    Spacer(Modifier.height(8.dp))
+                    Row(Modifier.fillMaxWidth().clickable { toMusic = true }.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(selected = toMusic, onClick = { toMusic = true })
+                        Text(stringResource(R.string.export_to_music))
+                    }
+                    Row(Modifier.fillMaxWidth().clickable { toMusic = false }.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(selected = !toMusic, onClick = { toMusic = false })
+                        Text(stringResource(R.string.choose_location))
+                    }
+                }
             }
         },
-        confirmButton = { TextButton(onClick = { onExport(what, format) }) { Text(stringResource(R.string.export_audio)) } },
+        confirmButton = { TextButton(onClick = { onExport(what, format, toMusic) }) { Text(stringResource(R.string.export_audio)) } },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
     )
 }

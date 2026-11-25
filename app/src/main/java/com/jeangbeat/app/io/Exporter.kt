@@ -41,7 +41,9 @@ class Exporter(private val context: Context, private val samples: SampleLibrary)
     }
 
     private fun deletePartial(uri: Uri) {
-        runCatching { android.provider.DocumentsContract.deleteDocument(context.contentResolver, uri) }
+        // Works for picker documents and for MediaStore entries.
+        val deleted = runCatching { android.provider.DocumentsContract.deleteDocument(context.contentResolver, uri) }.getOrDefault(false)
+        if (!deleted) runCatching { context.contentResolver.delete(uri, null, null) }
     }
 
     private fun write(

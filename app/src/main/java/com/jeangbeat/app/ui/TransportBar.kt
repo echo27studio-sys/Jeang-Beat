@@ -17,7 +17,16 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.automirrored.filled.Undo
-import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Archive
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.filled.IosShare
+import androidx.compose.material.icons.filled.LibraryMusic
+import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.SaveAs
+import androidx.compose.material.icons.filled.Unarchive
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.DropdownMenu
@@ -65,6 +74,8 @@ fun TransportBar(
     viewModel: StudioViewModel,
     onOpenProjects: () -> Unit,
     onExportAudio: () -> Unit,
+    onNewProject: () -> Unit,
+    onSaveAs: () -> Unit,
     files: FileActions,
     onLanguageChange: (AppLanguage) -> Unit,
 ) {
@@ -97,13 +108,19 @@ fun TransportBar(
         }
         Lcd(Timing.position(positionTick.toInt()))
         Box(Modifier.clickable { showTempo = true }) { Lcd("${state.project.tempo.roundToInt()}") }
+        // Save: always visible; the gold dot means there are edits not saved yet.
+        Box {
+            IconButton(onClick = viewModel::saveNowWithMessage) { Icon(Icons.Default.Save, stringResource(R.string.save)) }
+            if (state.unsaved) Box(Modifier.align(Alignment.TopEnd).padding(8.dp).size(8.dp).clip(CircleShape).background(JbColors.Accent))
+        }
+        IconButton(onClick = onExportAudio) { Icon(Icons.Default.IosShare, stringResource(R.string.export_audio), tint = JbColors.Accent) }
         IconButton(onClick = viewModel::undo, enabled = state.canUndo) { Icon(Icons.AutoMirrored.Filled.Undo, stringResource(R.string.undo)) }
         IconButton(onClick = viewModel::redo, enabled = state.canRedo) { Icon(Icons.AutoMirrored.Filled.Redo, stringResource(R.string.redo)) }
         Text(
             state.project.name, style = MaterialTheme.typography.labelLarge, color = JbColors.TextDim, maxLines = 1,
             modifier = Modifier.clickable(onClick = onOpenProjects),
         )
-        Menu(viewModel, onOpenProjects, onExportAudio, files, onLanguageChange)
+        Menu(state, viewModel, onOpenProjects, onExportAudio, onNewProject, onSaveAs, files, onLanguageChange)
     }
     if (showTempo) {
         TempoDialog(
@@ -127,23 +144,48 @@ private fun Lcd(text: String) {
 
 @Composable
 private fun Menu(
+    state: StudioState,
     viewModel: StudioViewModel,
     onOpenProjects: () -> Unit,
     onExportAudio: () -> Unit,
+    onNewProject: () -> Unit,
+    onSaveAs: () -> Unit,
     files: FileActions,
     onLanguageChange: (AppLanguage) -> Unit,
 ) {
     var open by remember { mutableStateOf(false) }
     Box {
-        IconButton(onClick = { open = true }) { Icon(Icons.Default.MoreVert, stringResource(R.string.more)) }
+        // A labelled "File" button instead of a bare ⋮ so save/export are easy to find.
+        Row(
+            Modifier.clip(RoundedCornerShape(8.dp)).background(JbColors.SurfaceRaised).clickable { open = true; viewModel.refreshProjects() }.padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(Icons.Default.Folder, null, tint = JbColors.Accent, modifier = Modifier.size(18.dp))
+            Text(" " + stringResource(R.string.file_menu), fontWeight = FontWeight.Bold, fontSize = 13.sp)
+        }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            DropdownMenuItem(text = { Text(stringResource(R.string.projects)) }, onClick = { open = false; onOpenProjects() })
-            DropdownMenuItem(text = { Text(stringResource(R.string.save)) }, onClick = { open = false; viewModel.saveNowWithMessage() })
+            fun close() { open = false }
+            DropdownMenuItem(leadingIcon = { Icon(Icons.Default.Add, null) }, text = { Text(stringResource(R.string.new_project)) }, onClick = { close(); onNewProject() })
+            DropdownMenuItem(leadingIcon = { Icon(Icons.Default.FolderOpen, null) }, text = { Text(stringResource(R.string.open) + "…") }, onClick = { close(); onOpenProjects() })
+            DropdownMenuItem(leadingIcon = { Icon(Icons.Default.Save, null) }, text = { Text(stringResource(R.string.save)) }, onClick = { close(); viewModel.saveNowWithMessage() })
+            DropdownMenuItem(leadingIcon = { Icon(Icons.Default.SaveAs, null) }, text = { Text(stringResource(R.string.save_as) + "…") }, onClick = { close(); onSaveAs() })
+            DropdownMenuItem(leadingIcon = { Icon(Icons.Default.Description, null) }, text = { Text(stringResource(R.string.save_copy_documents)) }, onClick = {
+                close()
+                if (!viewModel.saveCopyToDocuments()) files.exportProject()
+            })
+            val recent = state.projects.filter { it.fileName != state.fileName }.take(5)
+            if (recent.isNotEmpty()) {
+                HorizontalDivider()
+                Text(stringResource(R.string.recent_projects), style = MaterialTheme.typography.labelMedium, color = JbColors.TextDim, modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp))
+                recent.forEach { info ->
+                    DropdownMenuItem(text = { Text("   " + info.name, maxLines = 1) }, onClick = { close(); viewModel.openProject(info.fileName) })
+                }
+            }
             HorizontalDivider()
-            DropdownMenuItem(text = { Text(stringResource(R.string.export_audio)) }, onClick = { open = false; onExportAudio() })
-            DropdownMenuItem(text = { Text(stringResource(R.string.export_project)) }, onClick = { open = false; files.exportProject() })
-            DropdownMenuItem(text = { Text(stringResource(R.string.import_project)) }, onClick = { open = false; files.importProject() })
-            DropdownMenuItem(text = { Text(stringResource(R.string.import_audio)) }, onClick = { open = false; files.pickAudio(com.jeangbeat.app.AudioTarget.PLAYLIST) })
+            DropdownMenuItem(leadingIcon = { Icon(Icons.Default.IosShare, null) }, text = { Text(stringResource(R.string.export_audio) + " (MP3 / WAV)…") }, onClick = { close(); onExportAudio() })
+            DropdownMenuItem(leadingIcon = { Icon(Icons.Default.Archive, null) }, text = { Text(stringResource(R.string.export_project)) }, onClick = { close(); files.exportProject() })
+            DropdownMenuItem(leadingIcon = { Icon(Icons.Default.Unarchive, null) }, text = { Text(stringResource(R.string.import_project)) }, onClick = { close(); files.importProject() })
+            DropdownMenuItem(leadingIcon = { Icon(Icons.Default.LibraryMusic, null) }, text = { Text(stringResource(R.string.import_audio)) }, onClick = { close(); files.pickAudio(com.jeangbeat.app.AudioTarget.PLAYLIST) })
             HorizontalDivider()
             Text(stringResource(R.string.language), style = MaterialTheme.typography.labelMedium, color = JbColors.TextDim, modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp))
             listOf(

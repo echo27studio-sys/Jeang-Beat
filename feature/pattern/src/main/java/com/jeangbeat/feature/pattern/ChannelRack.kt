@@ -27,6 +27,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -177,13 +178,66 @@ private fun RackRow(
                 overflow = TextOverflow.Ellipsis,
             )
         }
-        Spacer(Modifier.width(5.dp))
+        ChannelMenu(channel, actions)
+        Spacer(Modifier.width(3.dp))
         Box(Modifier.weight(1f).horizontalScroll(scroll)) {
             if (pattern.isStepChannel(channel.id, channel.instrument)) {
                 StepRow(pattern, channel, color, playheadStep, actions, onSelect)
             } else {
                 MiniRoll(pattern, channel, color, playheadStep) { actions.openPianoRoll(channel.id) }
             }
+        }
+    }
+}
+
+/** The visible ⋮ menu on every rack row (3.0): everything you can do to a channel. */
+@Composable
+private fun ChannelMenu(channel: Channel, actions: PatternActions) {
+    var open by remember { mutableStateOf(false) }
+    var colors by remember { mutableStateOf(false) }
+    Box {
+        Box(
+            Modifier.size(width = 22.dp, height = 30.dp).clip(RoundedCornerShape(5.dp)).clickable { open = true }
+                .semantics { role = Role.Button; contentDescription = "${channel.name} menu" },
+            contentAlignment = Alignment.Center,
+        ) { Text("⋮", fontSize = 18.sp, color = JbColors.TextDim, fontWeight = FontWeight.Bold) }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false; colors = false }) {
+            if (colors) {
+                Row(Modifier.padding(8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    JbColors.Channels.forEachIndexed { i, c ->
+                        Box(
+                            Modifier.size(28.dp).clip(RoundedCornerShape(50)).background(c)
+                                .then(if (i == channel.color) Modifier.border(2.dp, Color.White, RoundedCornerShape(50)) else Modifier)
+                                .clickable { open = false; colors = false; actions.setChannelColor(channel.id, i) },
+                        )
+                    }
+                }
+                return@DropdownMenu
+            }
+            Text(channel.name, fontWeight = FontWeight.ExtraBold, color = JbColors.channel(channel.color), modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp))
+            DropdownMenuItem(text = { Text("✎  " + stringResource(R.string.rename)) }, onClick = { open = false; actions.renameChannel(channel.id) })
+            DropdownMenuItem(text = { Text("●  " + stringResource(R.string.pattern_color)) }, onClick = { colors = true })
+            DropdownMenuItem(text = { Text("⧉  " + stringResource(R.string.clone_channel)) }, onClick = { open = false; actions.cloneChannel(channel.id) })
+            DropdownMenuItem(text = { Text("♫  " + stringResource(R.string.open_piano_roll)) }, onClick = { open = false; actions.openPianoRoll(channel.id) })
+            DropdownMenuItem(text = { Text("⚙  " + stringResource(R.string.channel_settings)) }, onClick = { open = false; actions.openChannelSettings(channel.id) })
+            DropdownMenuItem(text = { Text("⇄  " + stringResource(R.string.replace_instrument)) }, onClick = { open = false; actions.replaceInstrument(channel.id) })
+            HorizontalDivider()
+            DropdownMenuItem(text = { Text(stringResource(R.string.fill_each, 2)) }, onClick = { open = false; actions.fillSteps(channel.id, 2) })
+            DropdownMenuItem(text = { Text(stringResource(R.string.fill_each, 4)) }, onClick = { open = false; actions.fillSteps(channel.id, 4) })
+            DropdownMenuItem(text = { Text(stringResource(R.string.fill_each, 8)) }, onClick = { open = false; actions.fillSteps(channel.id, 8) })
+            DropdownMenuItem(text = { Text("◀  " + stringResource(R.string.shift_left)) }, onClick = { open = false; actions.shiftSteps(channel.id, -1) })
+            DropdownMenuItem(text = { Text("▶  " + stringResource(R.string.shift_right)) }, onClick = { open = false; actions.shiftSteps(channel.id, 1) })
+            DropdownMenuItem(text = { Text(stringResource(R.string.randomize_velocity)) }, onClick = { open = false; actions.randomizeVelocity(channel.id) })
+            HorizontalDivider()
+            DropdownMenuItem(text = { Text("▲  " + stringResource(R.string.move_up)) }, onClick = { open = false; actions.moveChannel(channel.id, -1) })
+            DropdownMenuItem(text = { Text("▼  " + stringResource(R.string.move_down)) }, onClick = { open = false; actions.moveChannel(channel.id, 1) })
+            HorizontalDivider()
+            DropdownMenuItem(text = { Text(stringResource(R.string.clear_notes)) }, onClick = { open = false; actions.clearChannel(channel.id, false) })
+            DropdownMenuItem(text = { Text(stringResource(R.string.clear_all_patterns)) }, onClick = { open = false; actions.clearChannel(channel.id, true) })
+            DropdownMenuItem(
+                text = { Text("🗑  " + stringResource(R.string.delete_channel), color = JbColors.Record) },
+                onClick = { open = false; actions.deleteChannel(channel.id) },
+            )
         }
     }
 }
@@ -324,7 +378,7 @@ private fun GraphEditor(
         }
         Row(Modifier.fillMaxWidth().height(64.dp)) {
             // Align with the step columns of the rack (LED + knobs + box + name).
-            Spacer(Modifier.width(4.dp + 24.dp + 24.dp + 3.dp + 24.dp + 3.dp + 24.dp + 3.dp + 68.dp + 5.dp))
+            Spacer(Modifier.width(4.dp + 24.dp + 24.dp + 3.dp + 24.dp + 3.dp + 24.dp + 3.dp + 68.dp + 22.dp + 3.dp))
             Box(Modifier.weight(1f).fillMaxHeight().horizontalScroll(scroll)) {
                 Canvas(
                     Modifier

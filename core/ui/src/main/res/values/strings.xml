@@ -229,4 +229,24 @@
     <string name="zoom_out_v">Shorter rows</string>
     <string name="song_position">Song position</string>
     <string name="rack_hint">Tap a name for the Piano Roll · long-press for instrument settings · the box is the mixer track</string>
+    <string name="clone_channel">Clone channel</string>
+    <string name="replace_instrument">Replace instrument</string>
+    <string name="fill_each">Fill each %1$d steps</string>
+    <string name="shift_left">Shift steps left</string>
+    <string name="shift_right">Shift steps right</string>
+    <string name="randomize_velocity">Randomize velocity</string>
+    <string name="clear_all_patterns">Clear notes in all patterns</string>
+    <string name="split_by_channel">Split by channel</string>
+    <string name="channel_deleted">%1$s deleted</string>
+    <string name="file_menu">File</string>
+    <string name="recent_projects">Recent projects</string>
+    <string name="save_copy_documents">Save a copy to Documents</string>
+    <string name="exported_to">Saved to %1$s</string>
+    <string name="share">Share</string>
+    <string name="open_file">Open</string>
+    <string name="choose_location">Choose location…</string>
+    <string name="export_to_music">Save to Music/Jeang Beat</string>
+    <string name="unsaved_changes">Unsaved changes</string>
+    <string name="pattern_split">Pattern split into %1$d patterns</string>
+    <string name="nothing_to_split">Nothing to split: the pattern has notes on one channel only</string>
 </resources>

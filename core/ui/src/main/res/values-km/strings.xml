@@ -219,4 +219,24 @@
     <string name="zoom_out_v">ជួរទាបជាង</string>
     <string name="song_position">ទីតាំងបទ</string>
     <string name="rack_hint">ប៉ះឈ្មោះដើម្បីបើកព្យាណូរ៉ូល · ចុចឱ្យយូរសម្រាប់ការកំណត់ឧបករណ៍ · ប្រអប់គឺបទមិចស័រ</string>
+    <string name="clone_channel">ចម្លងឆានែល</string>  <!-- TODO native review -->
+    <string name="replace_instrument">ប្តូរឧបករណ៍</string>  <!-- TODO native review -->
+    <string name="fill_each">បំពេញរៀងរាល់ %1$d ជំហាន</string>  <!-- TODO native review -->
+    <string name="shift_left">រំកិលជំហានទៅឆ្វេង</string>  <!-- TODO native review -->
+    <string name="shift_right">រំកិលជំហានទៅស្តាំ</string>  <!-- TODO native review -->
+    <string name="randomize_velocity">កម្លាំងចៃដន្យ</string>  <!-- TODO native review -->
+    <string name="clear_all_patterns">សម្អាតណោតក្នុងលំនាំទាំងអស់</string>  <!-- TODO native review -->
+    <string name="split_by_channel">បំបែកតាមឆានែល</string>  <!-- TODO native review -->
+    <string name="channel_deleted">បានលុប %1$s</string>  <!-- TODO native review -->
+    <string name="file_menu">ឯកសារ</string>  <!-- TODO native review -->
+    <string name="recent_projects">គម្រោងថ្មីៗ</string>  <!-- TODO native review -->
+    <string name="save_copy_documents">រក្សាច្បាប់ចម្លងទៅ Documents</string>  <!-- TODO native review -->
+    <string name="exported_to">បានរក្សាទុកទៅ %1$s</string>  <!-- TODO native review -->
+    <string name="share">ចែករំលែក</string>  <!-- TODO native review -->
+    <string name="open_file">បើក</string>  <!-- TODO native review -->
+    <string name="choose_location">ជ្រើសទីតាំង…</string>  <!-- TODO native review -->
+    <string name="export_to_music">រក្សាទុកទៅ Music/Jeang Beat</string>  <!-- TODO native review -->
+    <string name="unsaved_changes">មានការកែប្រែមិនទាន់រក្សាទុក</string>  <!-- TODO native review -->
+    <string name="pattern_split">បានបំបែកលំនាំជា %1$d</string>  <!-- TODO native review -->
+    <string name="nothing_to_split">គ្មានអ្វីត្រូវបំបែកទេ</string>  <!-- TODO native review -->
 </resources>

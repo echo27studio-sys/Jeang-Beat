@@ -7,6 +7,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.jeangbeat.app.io.ExportFormat
 import com.jeangbeat.app.io.Exporter
+import com.jeangbeat.app.io.MediaStoreFiles
 import com.jeangbeat.app.io.SampleLibrary
 import com.jeangbeat.core.audio.ENGINE_MIXER_TRACKS
 import com.jeangbeat.core.audio.PlayMode
@@ -35,6 +36,16 @@ import com.jeangbeat.core.model.addPatternClip
 import com.jeangbeat.core.model.addPlaylistTrack
 import com.jeangbeat.core.model.addSample
 import com.jeangbeat.core.model.clearChannel
+import com.jeangbeat.core.model.clearChannelEverywhere
+import com.jeangbeat.core.model.cloneChannel
+import com.jeangbeat.core.model.fillEachSteps
+import com.jeangbeat.core.model.moveChannelBy
+import com.jeangbeat.core.model.randomizeVelocity
+import com.jeangbeat.core.model.replaceInstrument
+import com.jeangbeat.core.model.setChannelColor
+import com.jeangbeat.core.model.setPatternColor
+import com.jeangbeat.core.model.shiftChannelSteps
+import com.jeangbeat.core.model.splitByChannel
 import com.jeangbeat.core.model.clearLoop
 import com.jeangbeat.core.model.defaultPitch
 import com.jeangbeat.core.model.deleteClip
@@ -87,6 +98,20 @@ import com.jeangbeat.core.ui.R as UiR
 
 enum class StudioTab { PLAYLIST, PATTERN, MIXER }
 
+/** What the snackbar button does. */
+sealed interface MessageAction {
+    data object Undo : MessageAction
+    data class Share(val uri: Uri, val mime: String) : MessageAction
+}
+
+/** A one-shot message for the snackbar, optionally with a button. */
+data class UiMessage(
+    @StringRes val text: Int,
+    val args: List<Any> = emptyList(),
+    @StringRes val actionLabel: Int? = null,
+    val action: MessageAction? = null,
+)
+
 /** Where imported audio goes. */
 enum class AudioTarget { PLAYLIST, CHANNEL }
 
@@ -112,6 +137,8 @@ data class StudioState(
     val exportProgress: Float? = null,
     val busy: Boolean = false,
     val waveforms: Map<Int, FloatArray> = emptyMap(),
+    /** True while there are edits that are not saved to disk yet. */
+    val unsaved: Boolean = false,
 )
 
 class StudioViewModel(application: Application) : AndroidViewModel(application) {
@@ -133,10 +160,10 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
     private val _state = MutableStateFlow(StudioState(project = history.present, fileName = ""))
     val state: StateFlow<StudioState> = _state.asStateFlow()
 
-    private val _messages = MutableSharedFlow<Int>(extraBufferCapacity = 4)
+    private val _messages = MutableSharedFlow<UiMessage>(extraBufferCapacity = 4)
 
     /** One-shot user messages as string resource ids. */
-    val messages: SharedFlow<Int> = _messages
+    val messages: SharedFlow<UiMessage> = _messages
 
     private val project: Project get() = history.present
 
@@ -236,7 +263,10 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
                 paintPatternId = s.paintPatternId.takeIf { p.pattern(it) != null } ?: p.currentPatternId,
             )
         }
-        if (save) scheduleSave()
+        if (save) {
+            _state.update { it.copy(unsaved = true) }
+            scheduleSave()
+        }
     }
 
     private fun setProject(p: Project, fileName: String) {
@@ -515,6 +545,44 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
 
     fun setToMaster(track: Int, on: Boolean) = edit { p -> p.updateMixerTrack(track) { it.copy(toMaster = on) } }
 
+    // ---- 3.0 channel & pattern menu ---------------------------------------------------
+
+    fun setChannelColor(channelId: Int, color: Int) = edit { it.setChannelColor(channelId, color) }
+
+    fun cloneChannel(channelId: Int, name: String) = edit { it.cloneChannel(channelId, name) }
+
+    /** Deletes a channel and offers Undo in the snackbar. */
+    fun deleteChannel(channelId: Int) {
+        val name = project.channel(channelId)?.name ?: return
+        edit { it.removeChannel(channelId) }
+        message(UiMessage(UiR.string.channel_deleted, listOf(name), UiR.string.undo, MessageAction.Undo))
+    }
+
+    fun clearChannel(channelId: Int, allPatterns: Boolean) =
+        edit { if (allPatterns) it.clearChannelEverywhere(channelId) else it.clearChannel(channelId) }
+
+    fun moveChannel(channelId: Int, delta: Int) = edit { it.moveChannelBy(channelId, delta) }
+
+    fun fillSteps(channelId: Int, every: Int) = edit { it.fillEachSteps(channelId, every) }
+
+    fun shiftSteps(channelId: Int, delta: Int) = edit { it.shiftChannelSteps(channelId, delta) }
+
+    fun randomizeVelocity(channelId: Int) = edit { it.randomizeVelocity(channelId, 0.15f, (System.nanoTime() and 0xffff).toInt()) }
+
+    fun replaceInstrument(channelId: Int, instrument: Instrument) = edit { it.replaceInstrument(channelId, instrument) }
+
+    fun setPatternColor(color: Int) = edit { it.setPatternColor(it.currentPatternId, color) }
+
+    fun splitByChannel() {
+        val before = project
+        edit { it.splitByChannel(it.currentPatternId) }
+        if (project == before) {
+            message(UiR.string.nothing_to_split)
+        } else {
+            message(UiR.string.pattern_split, project.patterns.size - before.patterns.size)
+        }
+    }
+
     // ---- Audio import ------------------------------------------------------------------
 
     fun importAudio(uri: Uri, target: AudioTarget) {
@@ -568,6 +636,59 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun cancelExport() = exportCancel.set(true)
+
+    /**
+     * Exports straight to Music/Jeang Beat (stems to Download/Jeang Beat) without a file
+     * picker, then offers Share. Returns false when not supported (Android 8–9).
+     */
+    fun exportToMediaStore(mode: PlayMode, format: ExportFormat, baseName: String): Boolean {
+        if (!MediaStoreFiles.supported) return false
+        commitGesture()
+        val snapshot = project
+        val dir = MediaStoreFiles.dirFor(format)
+        val uri = MediaStoreFiles.create(app, "$baseName.${format.extension}", format.mime, dir) ?: return false
+        exportCancel = AtomicBoolean(false)
+        val cancel = exportCancel
+        _state.update { it.copy(exportProgress = 0f) }
+        viewModelScope.launch {
+            val ok = withContext(Dispatchers.Default) {
+                runCatching {
+                    exporter.exportAudio(snapshot, mode, format, uri, { cancel.get() }) { p -> _state.update { it.copy(exportProgress = p) } }
+                }.getOrDefault(false)
+            }
+            _state.update { it.copy(exportProgress = null) }
+            if (ok) {
+                MediaStoreFiles.publish(app, uri)
+                message(UiMessage(UiR.string.exported_to, listOf(dir), UiR.string.share, MessageAction.Share(uri, format.mime)))
+            } else {
+                MediaStoreFiles.discard(app, uri)
+                if (!cancel.get()) message(UiR.string.export_failed)
+            }
+        }
+        return true
+    }
+
+    /** Saves a .jbz copy (project + samples) to Documents/Jeang Beat/Projects. */
+    fun saveCopyToDocuments(): Boolean {
+        if (!MediaStoreFiles.supported) return false
+        saveNow()
+        val snapshot = project
+        val name = snapshot.name.replace(Regex("[\\\\/:*?\"<>|]"), "_").ifBlank { "Jeang Beat" } + ProjectBundle.EXTENSION
+        val uri = MediaStoreFiles.create(app, name, "application/octet-stream", MediaStoreFiles.PROJECTS_DIR) ?: return false
+        viewModelScope.launch {
+            val ok = withContext(Dispatchers.IO) {
+                runCatching { app.contentResolver.openOutputStream(uri, "wt")!!.use { ProjectBundle.export(snapshot, samples.dir, it) } }.isSuccess
+            }
+            if (ok) {
+                MediaStoreFiles.publish(app, uri)
+                message(UiMessage(UiR.string.exported_to, listOf(MediaStoreFiles.PROJECTS_DIR), UiR.string.share, MessageAction.Share(uri, "application/octet-stream")))
+            } else {
+                MediaStoreFiles.discard(app, uri)
+                message(UiR.string.export_failed)
+            }
+        }
+        return true
+    }
 
     fun exportProject(uri: Uri) {
         saveNow()
@@ -654,7 +775,8 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
         val fileName = _state.value.fileName
         saveJob = viewModelScope.launch {
             if (!immediate) delay(AUTOSAVE_DELAY_MILLIS)
-            withContext(Dispatchers.IO) { runCatching { store.save(p, fileName) } }
+            val ok = withContext(Dispatchers.IO) { runCatching { store.save(p, fileName) }.isSuccess }
+            if (ok && history.present == p) _state.update { it.copy(unsaved = false) }
         }
     }
 
@@ -662,11 +784,17 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
         commitGesture()
         saveJob?.cancel()
         val fileName = _state.value.fileName
-        if (fileName.isNotEmpty()) runCatching { store.save(project, fileName) }
+        if (fileName.isNotEmpty() && runCatching { store.save(project, fileName) }.isSuccess) {
+            _state.update { it.copy(unsaved = false) }
+        }
     }
 
-    private fun message(@StringRes id: Int) {
-        _messages.tryEmit(id)
+    private fun message(@StringRes id: Int, vararg args: Any) {
+        _messages.tryEmit(UiMessage(id, args.toList()))
+    }
+
+    private fun message(msg: UiMessage) {
+        _messages.tryEmit(msg)
     }
 
     companion object {

@@ -1,6 +1,14 @@
 package com.jeangbeat.feature.pattern
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -62,6 +70,22 @@ interface PatternActions {
 
     fun setChannelSteps(channelId: Int, steps: List<Int>)
     fun rotateChannel(channelId: Int, steps: Int, final: Boolean)
+
+    // ---- 3.0 channel menu ----
+    fun renameChannel(channelId: Int)
+    fun setChannelColor(channelId: Int, color: Int)
+    fun cloneChannel(channelId: Int)
+    fun deleteChannel(channelId: Int)
+    fun clearChannel(channelId: Int, allPatterns: Boolean)
+    fun moveChannel(channelId: Int, delta: Int)
+    fun fillSteps(channelId: Int, every: Int)
+    fun shiftSteps(channelId: Int, delta: Int)
+    fun randomizeVelocity(channelId: Int)
+    fun replaceInstrument(channelId: Int)
+
+    // ---- 3.0 pattern menu ----
+    fun setPatternColor(color: Int)
+    fun splitByChannel()
 }
 
 enum class PatternView { RACK, RING }
@@ -130,11 +154,21 @@ private fun PatternMenu(project: Project, actions: PatternActions) {
         leading = JbColors.channel(pattern.color),
         extra = { close ->
             HorizontalDivider()
-            DropdownMenuItem(text = { Text(stringResource(R.string.new_pattern)) }, onClick = { close(); actions.newPattern(false) })
-            DropdownMenuItem(text = { Text(stringResource(R.string.clone_pattern)) }, onClick = { close(); actions.newPattern(true) })
-            DropdownMenuItem(text = { Text(stringResource(R.string.rename)) }, onClick = { close(); actions.renamePattern() })
+            DropdownMenuItem(text = { Text("＋  " + stringResource(R.string.new_pattern)) }, onClick = { close(); actions.newPattern(false) })
+            DropdownMenuItem(text = { Text("⧉  " + stringResource(R.string.clone_pattern)) }, onClick = { close(); actions.newPattern(true) })
+            DropdownMenuItem(text = { Text("✎  " + stringResource(R.string.rename)) }, onClick = { close(); actions.renamePattern() })
+            DropdownMenuItem(text = { Text("✂  " + stringResource(R.string.split_by_channel)) }, onClick = { close(); actions.splitByChannel() })
+            Row(Modifier.padding(horizontal = 12.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                JbColors.Channels.forEachIndexed { i, c ->
+                    Box(
+                        Modifier.size(22.dp).clip(RoundedCornerShape(50)).background(c)
+                            .then(if (i == pattern.color) Modifier.border(2.dp, Color.White, RoundedCornerShape(50)) else Modifier)
+                            .clickable { close(); actions.setPatternColor(i) },
+                    )
+                }
+            }
             if (project.patterns.size > 1) {
-                DropdownMenuItem(text = { Text(stringResource(R.string.delete_pattern)) }, onClick = { close(); actions.deletePattern() })
+                DropdownMenuItem(text = { Text("🗑  " + stringResource(R.string.delete_pattern), color = JbColors.Record) }, onClick = { close(); actions.deletePattern() })
             }
             HorizontalDivider()
             Timing.PATTERN_BARS.forEach { b ->
