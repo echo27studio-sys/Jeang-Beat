@@ -11,6 +11,9 @@ internal class NativeEngine {
     external fun nativeLatencyMillis(ptr: Long): Double
 
     external fun nativePlay(ptr: Long)
+    external fun nativePlayCountIn(ptr: Long, bars: Int)
+    external fun nativeSetMetronome(ptr: Long, on: Boolean)
+    external fun nativeIsCountingIn(ptr: Long): Boolean
     external fun nativeStop(ptr: Long)
     external fun nativeSetPosition(ptr: Long, tick: Long)
     external fun nativeSetTempo(ptr: Long, bpm: Float)

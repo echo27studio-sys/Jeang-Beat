@@ -281,4 +281,12 @@
     <string name="cat_fx">FX</string>  <!-- TODO native review -->
     <string name="drop_sound_on_playlist">សំឡេងមានស្រាប់ដាក់ក្នុង Channel Rack។ ដាក់ឯកសារសំឡេងលើ Playlist។</string>  <!-- TODO native review -->
     <string name="drop_failed">មិនអាចបន្ថែមនៅទីនេះទេ</string>  <!-- TODO native review -->
+    <string name="playback_channel">ការចាក់</string>  <!-- TODO native review -->
+    <string name="playing_in_background">Jeang Beat កំពុងចាក់</string>  <!-- TODO native review -->
+    <string name="recording_hint">កំពុងថត៖ លេងគ្រាប់ចុច piano roll ឬ pads។ ចុច ● ម្ដងទៀតដើម្បីឈប់ថត។</string>  <!-- TODO native review -->
+    <string name="metronome">មេត្រូណូម</string>  <!-- TODO native review -->
+    <string name="count_in">រាប់មុនថត</string>  <!-- TODO native review -->
+    <string name="count_in_off">បិទ</string>  <!-- TODO native review -->
+    <string name="count_in_bars">%1$d របារ</string>  <!-- TODO native review -->
+    <string name="perform_pads">Pads សម្រាប់លេង</string>  <!-- TODO native review -->
 </resources>

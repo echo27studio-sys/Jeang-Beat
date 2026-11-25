@@ -560,6 +560,53 @@ void testLimiterAndSwap() {
 
 }  // namespace
 
+void testMetronome() {
+    std::puts("Metronome and count-in");
+    {
+        Engine& e = *newEngine();
+        e.beginSnapshot(0, 0, kBar, -1, -1);
+        e.addPattern(kBar, kTicksPerStep);
+        e.commitSnapshot();
+        e.play();
+        check(peak(renderLeft(e, kSr / 4)) < 1e-6f, "no click when the metronome is off");
+        delete &e;
+    }
+    {
+        Engine& e = *newEngine();
+        e.beginSnapshot(0, 0, kBar, -1, -1);
+        e.addPattern(kBar, kTicksPerStep);
+        e.commitSnapshot();
+        e.setMetronome(true);
+        e.play();
+        auto out = renderLeft(e, 2 * kTicksPerBeat * kFramesPerTick);
+        check(firstNonZero(out) <= 1, "click on the first beat");
+        const int second = firstNonZero(out, kTicksPerBeat * kFramesPerTick - 10);
+        check(std::abs(second - kTicksPerBeat * kFramesPerTick) <= 1, "click on the second beat (got " + std::to_string(second) + ")");
+        delete &e;
+    }
+    {
+        // One bar of count-in: clicks, but the hit on tick 0 only sounds after the count-in.
+        Engine& e = *newEngine();
+        e.beginSnapshot(0, 0, kBar, -1, -1);
+        std::vector<float> p = drumParams();
+        e.addChannel(0, 0, -1, p.data(), 3, 0.8f, 0.f, false, false, 0);
+        addNotes(e, e.addPattern(kBar, kTicksPerStep), 0, {0, 24, 60, 127});
+        e.commitSnapshot();
+        e.play(1);
+        renderLeft(e, kBar * kFramesPerTick / 2);
+        check(e.isCountingIn() && !e.isPlaying(), "counting in, transport not started");
+        check(e.positionTicks() == 0.f, "position stays at the start during count-in");
+        renderLeft(e, kBar * kFramesPerTick / 2 + 200);
+        check(!e.isCountingIn() && e.isPlaying(), "transport starts after one bar");
+        e.stop();
+        e.play(1);
+        e.stop();
+        renderLeft(e, 256);
+        check(!e.isCountingIn() && !e.isPlaying(), "stop cancels the count-in");
+        delete &e;
+    }
+}
+
 int main() {
     testKit();
     testTiming();
@@ -572,6 +619,7 @@ int main() {
     testAudioClipsAndAutomation();
     testInstruments();
     testLimiterAndSwap();
+    testMetronome();
     if (failures == 0) {
         std::puts("\nAll engine tests passed.");
         return EXIT_SUCCESS;

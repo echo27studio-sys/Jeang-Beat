@@ -13,6 +13,9 @@ class JeangBeatApp : Application() {
         private set
     lateinit var settings: Settings
         private set
+
+    /** True while the studio screen is on screen. */
+    @Volatile var visible: Boolean = false
     lateinit var browser: com.jeangbeat.app.browser.BrowserRepository
         private set
 

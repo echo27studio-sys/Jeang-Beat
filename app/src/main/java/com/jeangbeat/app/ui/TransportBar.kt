@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
@@ -19,6 +20,8 @@ import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.LibraryMusic
+import androidx.compose.material.icons.filled.AvTimer
+import androidx.compose.material.icons.filled.FiberManualRecord
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Folder
@@ -107,6 +110,10 @@ fun TransportBar(
                 stringResource(if (state.isPlaying) R.string.stop else R.string.play),
                 tint = Color.Black, modifier = Modifier.size(28.dp),
             )
+        }
+        RecordButton(state, viewModel)
+        IconButton(onClick = viewModel::toggleMetronome) {
+            Icon(Icons.Default.AvTimer, stringResource(R.string.metronome), tint = if (state.metronome) JbColors.Accent else JbColors.TextDim)
         }
         // FL Studio PAT / SONG switch
         Row(Modifier.clip(RoundedCornerShape(8.dp))) {
@@ -210,6 +217,35 @@ private fun Menu(
                 AppLanguage.KHMER to R.string.language_khmer,
             ).forEach { (language, label) ->
                 DropdownMenuItem(text = { Text(stringResource(label)) }, onClick = { open = false; onLanguageChange(language) })
+            }
+        }
+    }
+}
+
+
+/** Record: tap to record into the pattern (count-in first); long-press to choose the count-in. */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@Composable
+private fun RecordButton(state: StudioState, viewModel: StudioViewModel) {
+    var menu by remember { mutableStateOf(false) }
+    Box {
+        Box(
+            Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(if (state.recording) Color(0xFF5A1010) else JbColors.SurfaceRaised)
+                .combinedClickable(onClick = viewModel::toggleRecord, onLongClick = { menu = true }),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(Icons.Default.FiberManualRecord, stringResource(R.string.record), tint = Color(0xFFE5484D), modifier = Modifier.size(22.dp))
+        }
+        DropdownMenu(menu, { menu = false }) {
+            Text(stringResource(R.string.count_in), style = MaterialTheme.typography.labelMedium, color = JbColors.TextDim, modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp))
+            listOf(0, 1, 2).forEach { bars ->
+                DropdownMenuItem(
+                    text = { Text((if (state.countInBars == bars) "✓ " else "   ") + if (bars == 0) stringResource(R.string.count_in_off) else stringResource(R.string.count_in_bars, bars)) },
+                    onClick = { menu = false; viewModel.setCountInBars(bars) },
+                )
             }
         }
     }

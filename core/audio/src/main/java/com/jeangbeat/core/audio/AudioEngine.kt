@@ -52,6 +52,14 @@ class AudioEngine(private val realtime: Boolean = true) : AutoCloseable {
     fun takeMeters(out: FloatArray) = call { native.nativeTakeMeters(it, out) }
 
     fun play() = call { native.nativePlay(it) }
+
+    /** Clicks [bars] bars, then starts (for recording). */
+    fun playWithCountIn(bars: Int) = call { native.nativePlayCountIn(it, bars) }
+
+    fun setMetronome(on: Boolean) = call { native.nativeSetMetronome(it, on) }
+
+    /** True during a count-in (the transport has not started yet). */
+    val isCountingIn: Boolean get() = synchronized(lock) { ptr != 0L && native.nativeIsCountingIn(ptr) }
     fun stop() = call { native.nativeStop(it) }
 
     /** Moves the song marker; while playing in SONG mode playback jumps there. */

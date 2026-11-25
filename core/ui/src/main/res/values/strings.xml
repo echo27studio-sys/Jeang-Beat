@@ -291,4 +291,12 @@
     <string name="cat_fx">FX</string>
     <string name="drop_sound_on_playlist">Built-in sounds go in the Channel Rack. Drop audio files on the Playlist.</string>
     <string name="drop_failed">Could not add it here</string>
+    <string name="playback_channel">Playback</string>
+    <string name="playing_in_background">Jeang Beat is playing</string>
+    <string name="recording_hint">Recording: play the piano-roll keys or the pads. Tap ● again to stop recording.</string>
+    <string name="metronome">Metronome</string>
+    <string name="count_in">Count-in</string>
+    <string name="count_in_off">Off</string>
+    <string name="count_in_bars">%1$d bar(s)</string>
+    <string name="perform_pads">Perform pads</string>
 </resources>

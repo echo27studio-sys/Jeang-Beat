@@ -40,7 +40,9 @@ public:
     int32_t sampleRate() const { return sampleRate_; }
 
     // ---- Control thread: transport and live playing ----
-    void play();
+    // countInBars > 0: click that many bars before the transport starts (recording).
+    void play(int32_t countInBars = 0);
+    void setMetronome(bool on);
     void stop();
     void setPosition(int64_t tick);  // song marker (SONG mode); jumps while playing
     void setPatternPosition(int64_t tick);  // start position inside the pattern (PAT mode)
@@ -84,6 +86,7 @@ public:
     // ---- Any thread ----
     float positionTicks() const { return positionTicks_.load(std::memory_order_relaxed); }
     bool isPlaying() const { return playingFlag_.load(std::memory_order_relaxed); }
+    bool isCountingIn() const { return countingFlag_.load(std::memory_order_relaxed); }
     float takePeak() { return peak_.exchange(0.f, std::memory_order_relaxed); }
     // Fills out[2*kMaxInserts] with L/R peaks since the last call and resets them.
     void takeMeters(float* out);
@@ -95,7 +98,7 @@ public:
 private:
     enum class CommandType : int32_t {
         Play, Stop, SetPosition, SetPatternPosition, SetTempo, SetSwing, NoteOn, NoteOff, PadHold, PadRelease,
-        SetRepeatTicks, AllNotesOff, SetMasterGain, SetStemInsert,
+        SetRepeatTicks, AllNotesOff, SetMasterGain, SetStemInsert, SetMetronome,
     };
     struct Command {
         CommandType type = CommandType::Play;
@@ -155,6 +158,9 @@ private:
     void applyAutomation(double tick);
     void processMixer(float* out, int32_t n);
     int32_t swingOffset(int32_t tick, int32_t stepTicks) const;
+    // Metronome: queue clicks for the beats in [from, to) ticks, which map to frames [frameStart, frameEnd).
+    void scheduleClicks(double from, double to, int32_t frameStart, int32_t frameEnd);
+    void renderClicks(float* out, int32_t n);
 
     int32_t sampleRate_ = 48000;
     DrumKit kit_;
@@ -189,6 +195,20 @@ private:
     float masterGain_ = 1.f;
     int32_t stemInsert_ = -1;
 
+    // Metronome and count-in (audio thread)
+    static constexpr int32_t kMaxClicks = 8;
+    bool metronome_ = false;
+    double countInLeft_ = 0.0;  // ticks of count-in still to play
+    double countTick_ = 0.0;    // count-in clock
+    int32_t clickOffsets_[kMaxClicks] = {};
+    bool clickAccents_[kMaxClicks] = {};
+    int32_t clickCount_ = 0;
+    int32_t clickLeft_ = 0;  // frames left of the current click
+    double clickPhase_ = 0.0;
+    double clickInc_ = 0.0;
+    float clickEnv_ = 0.f;
+    float clickGain_ = 0.f;
+
     // Mixer bus buffers for one sub-block: [insert][channel][frame]
     float insIn_[kMaxInserts][2][kSubBlockFrames] = {};
     float insOut_[kMaxInserts][2][kSubBlockFrames] = {};
@@ -196,6 +216,7 @@ private:
 
     std::atomic<float> positionTicks_{0.f};
     std::atomic<bool> playingFlag_{false};
+    std::atomic<bool> countingFlag_{false};
     std::atomic<float> peak_{0.f};
     std::atomic<float> meters_[kMaxInserts * 2];
 };

@@ -4,7 +4,17 @@ A free beat-making app for Android phones and tablets. The goal is to be **easie
 than FL Studio Mobile and just as professional**, with a Khmer identity: a
 bilingual interface (English / ខ្មែរ) and Khmer instruments.
 
-> Status: **2.0 in development**. See [docs/ROADMAP.md](docs/ROADMAP.md) and the [2.0 design](docs/design/v2/README.md).
+> Status: **3.0 built, needs testing on phones**. See [docs/ROADMAP.md](docs/ROADMAP.md), the [3.0 notes](docs/design/v3/README.md) and the [2.0 design](docs/design/v2/README.md).
+
+## New in 3.0
+
+| Area | What changed |
+|---|---|
+| **Save & export** | Save and Export icons in the transport (gold dot = unsaved), a labelled **File** menu. Export **MP3** (128/192/320 kbps), WAV 16/24/32-bit float, M4A, stems; song / pattern / loop region; 44.1 or 48 kHz; normalize. Saves straight to `Music/Jeang Beat` and offers **Share** |
+| **Channels** | ⋮ menu on every channel: rename, colour, replace sound, clone, delete (undo), clear, move, fill each 2/4/8, shift, randomize velocity. Pattern menu: colour, length, **Split by channel** |
+| **Long patterns** | Patterns grow automatically as you draw (up to 512 bars) or have a fixed length. Piano roll: bar ruler, tap to move the playhead, long-press-drag for a loop region |
+| **Browser** | Link sample folders (Download, a synced Drive / Syncthing folder, SD card). They stay in sync; search, filters, favourites, preview. **Long-press and drag** a sound onto the Channel Rack, Playlist, Mixer or Piano Roll |
+| **Play & record** | Playback continues with the screen off (notification with Stop). Metronome, **Record** with count-in into the pattern from the piano-roll keys or the **Perform pads** |
 
 ## What's in 2.0
 
@@ -17,7 +27,7 @@ Three tabs, like FL Studio: **Playlist · Pattern · Mixer**. The transport has 
 | **Playlist** | Tracks with pattern, audio and automation clips. Tools: draw, paint, select, slice, delete, mute. Song marker, loop region, make unique, automation point editor |
 | **Mixer** | Master + 24 inserts: fader, pan, stereo meters, mute/solo. 10 effect slots per track with mix knobs — **EQ** (live curve), **compressor** with **sidechain**, **limiter**, **reverb**, **tempo-synced delay**, **saturator**, **filter**. Sends between tracks (loops prevented). Long-press any fader or knob to automate it |
 | **Audio engine** | Native C++ on Google Oboe: sample-accurate song playback, mixer buses processed in routing order, effect tails survive edits, nothing allocated on the audio thread |
-| **Files** | Import audio (MP3, WAV, M4A, OGG, FLAC…) as a Playlist clip or a sampler instrument. Export WAV 16/24-bit, M4A (AAC) or stems (zip, one WAV per mixer track). Export / import whole projects as `.jbz` (with their samples). Autosave and undo/redo |
+| **Files** | Import audio (MP3, WAV, M4A, OGG, FLAC…) as a Playlist clip or a sampler instrument. Export / import whole projects as `.jbz` (with their samples). Autosave and undo/redo |
 | **Languages** | English and Khmer |
 
 ## Download
@@ -30,9 +40,11 @@ Releases page once a release key is set up — see [docs/RELEASING.md](docs/RELE
 
 ```
 app/                 App shell: StudioViewModel (state, undo, autosave), screens, dialogs,
-                     io/ (audio import via MediaCodec, WAV/M4A/stems export)
+                     io/ (audio import via MediaCodec, MP3/WAV/M4A/stems export, MediaStore),
+                     browser/ (linked folders, index, preview), PlaybackService
 core/model/          Pure Kotlin: project, patterns, playlist, mixer, editing operations, undo
-core/data/           .jbeat project files (JSON), .jbz bundles, WAV read/write
+core/data/           .jbeat project files (JSON), .jbz bundles, WAV read/write,
+                     browser/ (folder scanner, file-name BPM/key parser, index)
 core/audio/          C++ audio engine (src/main/cpp): sequencer, voices, mixer, effects
                      + Kotlin API (AudioEngine, OfflineRenderer)
   native-tests/      Desktop tests for the C++ engine
@@ -59,6 +71,9 @@ Requirements: JDK 17+, Android SDK (platform 36, NDK 28.2.13676358, CMake 3.31.6
 ```
 
 ## Licences and sounds
+
+MP3 export uses **LAME 3.100** (LGPL), built as a separate shared library; see
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and *File → Open-source licences* in the app.
 
 All built-in sounds are synthesised in code (`core/audio/src/main/cpp/engine/DrumKit.cpp`),
 so the app ships with no third-party samples. The Khmer *chhing* and *skor* sounds

@@ -12,7 +12,8 @@ Stack: Kotlin + Jetpack Compose for the UI, C++ + Google Oboe for audio.
 | M2 | Beat making: step sequencer, 4×4 pads with note repeat and recording, patterns, save/load, undo | ✅ Done |
 | M3 | Melody: piano roll (scale lock, velocity), 808 bass with glide, synth | ✅ Done |
 | **2.0** | **Playlist · Pattern (FL rack + Ring) · Mixer, Piano Roll inside Pattern** — [design](design/v2/README.md). Song mode, mixer with 7 effects, sends, sidechain, automation, audio import, WAV/M4A/stems export, project bundles | ✅ Built (needs testing on phones) |
-| 2.x | Rhythm Library + Learn mode (Khmer rhythms after transcription with musicians), Quick Start loops, video share | Next |
+| **3.0** | **Visible save + MP3 export, channel menus, auto-length patterns (512 bars), Browser with linked folders + drag & drop, background playback, metronome, live recording** — [notes](design/v3/README.md) | ✅ Built (needs testing on phones) |
+| 3.x | Rhythm Library + Learn mode (Khmer rhythms after transcription with musicians), Quick Start loops, video share | Next |
 | M5 | First public APK: polish from phone testing, signed release | |
 | M6+ | Vocal recording, sample chopper, automation, sidechain, chord generator, MIDI controllers, stems, tutorial | |
 
@@ -24,9 +25,10 @@ Stack: Kotlin + Jetpack Compose for the UI, C++ + Google Oboe for audio.
 - "Khmer Fusion" Quick Start styles (M5).
 - Traditional tuning presets (later, to be verified with Khmer musicians).
 
-## Known limitations (2.0)
-- The 2.0 UI has never run on a device or emulator yet: it needs testing on real phones and tablets.
-- MP3 export is not offered (Android has no built-in MP3 encoder); M4A (AAC) and WAV are.
+## Known limitations (3.0)
+- The UI has not run on a device or emulator in development (no emulator in the build machine): it needs testing on real phones and tablets.
 - Tempo cannot be automated; audio clips do not time-stretch when the tempo changes.
-- Audio stops when the app goes to the background (needs a foreground service for background playback).
-- Live recording was part of the removed Pads tab and is not in 2.0 yet.
+- Browser preview uses Android's media player (not the engine), so it does not follow the song tempo; no waveform preview yet.
+- Built-in packs are the synthesised sounds; there are no WAV packs in the APK yet (waiting for Khmer recordings).
+- Recorded notes get a fixed length (the snap or one step); held-note length is not recorded.
+- Screenshot tests are not in CI yet (Robolectric/Paparazzi downloads were rate-limited before).

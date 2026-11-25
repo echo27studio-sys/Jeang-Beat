@@ -85,6 +85,8 @@ import com.jeangbeat.core.model.updatePlaylistTrack
 import com.jeangbeat.core.model.updateStepNote
 import com.jeangbeat.core.model.withSwing
 import com.jeangbeat.core.model.withTempo
+import com.jeangbeat.core.model.Recording
+import com.jeangbeat.core.model.recordNote
 import com.jeangbeat.core.model.DropItem
 import com.jeangbeat.core.model.DropTarget
 import com.jeangbeat.core.model.dropItem
@@ -152,6 +154,10 @@ data class StudioState(
     val rollLoop: IntRange? = null,
     /** Where PAT playback starts inside the pattern. */
     val rollStart: Int = 0,
+    val metronome: Boolean = false,
+    /** Live recording into the current pattern (PAT mode). */
+    val recording: Boolean = false,
+    val countInBars: Int = 1,
 )
 
 class StudioViewModel(application: Application) : AndroidViewModel(application) {
@@ -198,16 +204,31 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
     fun onForeground() {
         browser.refresh()
         val ok = engine.start()
+        engine.setMetronome(settings.metronome)
         pushToEngine()
-        _state.update { it.copy(audioOk = ok) }
+        // Playback may have been stopped from the notification while we were away.
+        val playing = engine.isPlaying || engine.isCountingIn
+        _state.update {
+            it.copy(
+                audioOk = ok, isPlaying = playing, recording = it.recording && playing,
+                metronome = settings.metronome, countInBars = settings.countInBars,
+            )
+        }
         if (!ok) message(UiR.string.audio_error)
     }
 
-    fun onBackground() {
+    /**
+     * The app went to the background. While a song plays it keeps playing (the
+     * activity starts a foreground service for that); otherwise audio closes.
+     * Returns true when playback continues.
+     */
+    fun onBackground(): Boolean {
         previewer.stop()
+        saveNow()
+        if (_state.value.isPlaying && !_state.value.recording) return true
         stop()
         engine.pause()
-        saveNow()
+        return false
     }
 
     override fun onCleared() {
@@ -345,10 +366,82 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
 
     fun stop() {
         engine.stop()
-        _state.update { it.copy(isPlaying = false) }
+        if (_state.value.recording) commitGesture()
+        _state.update { it.copy(isPlaying = false, recording = false) }
+    }
+
+    // ---- Metronome & live recording (3.0) -------------------------------------------------
+
+    fun toggleMetronome() {
+        val on = !_state.value.metronome
+        settings.metronome = on
+        engine.setMetronome(on)
+        _state.update { it.copy(metronome = on) }
+    }
+
+    fun setCountInBars(bars: Int) {
+        settings.countInBars = bars.coerceIn(0, 2)
+        _state.update { it.copy(countInBars = settings.countInBars) }
+    }
+
+    /**
+     * Record button: records key and pad hits into the current pattern while it
+     * loops (PAT mode). Starts playback with a count-in; pressing again stops
+     * recording but keeps playing. The whole take is one undo step.
+     */
+    fun toggleRecord() {
+        if (_state.value.recording) {
+            commitGesture()
+            _state.update { it.copy(recording = false) }
+            return
+        }
+        if (_state.value.mode != PlayMode.PATTERN) setMode(PlayMode.PATTERN)
+        _state.update { it.copy(recording = true) }
+        if (!_state.value.isPlaying) {
+            pushToEngine()
+            val bars = _state.value.countInBars
+            if (bars > 0) engine.playWithCountIn(bars) else engine.play()
+            _state.update { it.copy(isPlaying = true) }
+        }
+        message(UiR.string.recording_hint)
+    }
+
+    private fun recordHit(channelId: Int, pitch: Int, velocity: Int) {
+        val s = _state.value
+        if (!s.recording || !engine.isPlaying || engine.isCountingIn) return
+        val pattern = project.currentPattern
+        val snap = s.rollSnap.ticks.takeIf { it > 1 } ?: pattern.stepTicks
+        val loop = s.rollLoop
+        val start = loop?.first ?: 0
+        val end = loop?.let { it.last + 1 } ?: pattern.lengthTicks
+        val tick = Recording.noteTick(engine.positionTicks, engine.latencyMillis ?: 0.0, project.tempo, snap, start, end)
+        editTransient { it.recordNote(channelId, pitch, tick, maxOf(snap, pattern.stepTicks), velocity) }
+    }
+
+    /** A key on the piano-roll keyboard. */
+    fun playKey(channelId: Int, pitch: Int) {
+        previewNote(channelId, pitch)
+        recordHit(channelId, pitch, 100)
+    }
+
+    /** Perform pads: press. */
+    fun padDown(channelId: Int) {
+        val ch = project.channel(channelId) ?: return
+        engine.padDown(channelId, ch.instrument.defaultPitch, 110)
+        recordHit(channelId, ch.instrument.defaultPitch, 110)
+    }
+
+    fun padUp(channelId: Int) {
+        val ch = project.channel(channelId) ?: return
+        engine.padUp(channelId, ch.instrument.defaultPitch)
     }
 
     fun positionTicks(): Float = engine.positionTicks
+
+    /** Playback was stopped outside the app (notification Stop button): update the UI. */
+    fun syncTransport() {
+        if (_state.value.isPlaying && !engine.isPlaying && !engine.isCountingIn) stop()
+    }
 
     fun takeMeters(out: FloatArray) = engine.takeMeters(out)
 

@@ -79,7 +79,8 @@ void Engine::send(const Command& cmd) {
     commands_.push(cmd);
 }
 
-void Engine::play() { send({CommandType::Play}); }
+void Engine::play(int32_t countInBars) { send({CommandType::Play, countInBars}); }
+void Engine::setMetronome(bool on) { send({CommandType::SetMetronome, on ? 1 : 0}); }
 void Engine::stop() { send({CommandType::Stop}); }
 void Engine::setPosition(int64_t tick) { send({CommandType::SetPosition, 0, 0, 0, 0.f, std::max<int64_t>(0, tick)}); }
 void Engine::setPatternPosition(int64_t tick) { send({CommandType::SetPatternPosition, 0, 0, 0, 0.f, std::max<int64_t>(0, tick)}); }
@@ -355,11 +356,21 @@ void Engine::releaseSequenced() {
 void Engine::handle(const Command& cmd) {
     switch (cmd.type) {
         case CommandType::Play:
-            playing_ = true;
             tick_ = current_->mode == PlayMode::Song ? startTick_ : patternStart_;
+            if (cmd.a > 0 && !playing_) {
+                // Count-in: only clicks until it is over, then the transport starts.
+                countInLeft_ = static_cast<double>(cmd.a) * 4.0 * kTicksPerBeat;
+                countTick_ = 0.0;
+            } else {
+                playing_ = true;
+            }
+            break;
+        case CommandType::SetMetronome:
+            metronome_ = cmd.a != 0;
             break;
         case CommandType::Stop:
             playing_ = false;
+            countInLeft_ = 0.0;
             tick_ = current_->mode == PlayMode::Song ? startTick_ : patternStart_;
             releaseSequenced();
             break;
@@ -862,8 +873,21 @@ void Engine::render(float* out, int32_t frames) {
 
         Segment segs[2];
         int32_t segCount = 0;
-        if (playing_) {
+        clickCount_ = 0;
+        if (countInLeft_ > 0.0) {
+            scheduleClicks(countTick_, countTick_ + ticks, 0, n);
+            countTick_ += ticks;
+            countInLeft_ -= ticks;
+            collectRepeatEvents(freeTick_, freeTick_ + ticks);
+            if (countInLeft_ <= 0.0) {
+                countInLeft_ = 0.0;
+                playing_ = true;  // from the next sub-block
+            }
+        } else if (playing_) {
             segCount = makeSegments(ticks, n, segs);
+            if (metronome_) {
+                for (int32_t k = 0; k < segCount; ++k) scheduleClicks(segs[k].from, segs[k].to, segs[k].frameStart, segs[k].frameEnd);
+            }
             for (int32_t k = 0; k < segCount; ++k) collectEvents(segs[k]);
             collectRepeatEvents(segs[0].from, segs[0].from + ticks);
             if (current_->mode == PlayMode::Song) applyAutomation(tick_);
@@ -902,8 +926,9 @@ void Engine::render(float* out, int32_t frames) {
         }
 
         processMixer(out + static_cast<size_t>(done) * 2, n);
+        renderClicks(out + static_cast<size_t>(done) * 2, n);
 
-        if (playing_) {
+        if (segCount > 0) {
             tick_ = segs[segCount - 1].to;
         }
         freeTick_ += ticks;
@@ -921,6 +946,41 @@ void Engine::render(float* out, int32_t frames) {
     if (peak > peak_.load(std::memory_order_relaxed)) peak_.store(peak, std::memory_order_relaxed);
     positionTicks_.store(static_cast<float>(tick_), std::memory_order_relaxed);
     playingFlag_.store(playing_, std::memory_order_relaxed);
+    countingFlag_.store(countInLeft_ > 0.0, std::memory_order_relaxed);
+}
+
+void Engine::scheduleClicks(double from, double to, int32_t frameStart, int32_t frameEnd) {
+    const double beat = kTicksPerBeat;
+    for (double b = std::ceil(from / beat - 1e-9) * beat; b < to && clickCount_ < kMaxClicks; b += beat) {
+        const auto at = static_cast<int32_t>(frameStart + (b - from) * framesPerTick_);
+        clickOffsets_[clickCount_] = std::clamp(at, frameStart, std::max(frameStart, frameEnd - 1));
+        clickAccents_[clickCount_] = std::fmod(b, 4.0 * beat) < 0.5;
+        ++clickCount_;
+    }
+}
+
+void Engine::renderClicks(float* out, int32_t n) {
+    if (clickCount_ == 0 && clickLeft_ == 0) return;
+    const float decay = std::exp(-1.f / (0.006f * static_cast<float>(sampleRate_)));
+    int32_t next = 0;
+    for (int32_t f = 0; f < n; ++f) {
+        while (next < clickCount_ && clickOffsets_[next] == f) {
+            const bool accent = clickAccents_[next++];
+            clickLeft_ = sampleRate_ / 25;  // 40 ms
+            clickPhase_ = 0.0;
+            clickInc_ = 2.0 * 3.14159265358979 * (accent ? 1760.0 : 1320.0) / sampleRate_;
+            clickEnv_ = 1.f;
+            clickGain_ = accent ? 0.45f : 0.3f;
+        }
+        if (clickLeft_ > 0) {
+            const float s = static_cast<float>(std::sin(clickPhase_)) * clickEnv_ * clickGain_;
+            clickPhase_ += clickInc_;
+            clickEnv_ *= decay;
+            out[2 * f] += s;
+            out[2 * f + 1] += s;
+            --clickLeft_;
+        }
+    }
 }
 
 }  // namespace jb

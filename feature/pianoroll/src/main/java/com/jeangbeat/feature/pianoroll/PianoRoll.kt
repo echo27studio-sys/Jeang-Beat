@@ -113,6 +113,9 @@ interface PianoRollActions {
     /** Edits this channel's notes in the current pattern. [final] = false while dragging (no undo step yet). */
     fun editNotes(final: Boolean, transform: (List<Note>) -> List<Note>)
     fun previewNote(pitch: Int)
+
+    /** A key on the piano-roll keyboard was played (recorded while recording). */
+    fun playKey(pitch: Int) = previewNote(pitch)
     fun setSnap(snap: Snap)
     fun setScale(scale: ScaleSetting)
     fun copy(notes: List<Note>)
@@ -285,7 +288,7 @@ fun PianoRoll(
                     Modifier.size(KEYBOARD_WIDTH, keyboardHeight).pointerInput(rows, rowPx, actions) {
                         awaitEachGesture {
                             val down = awaitFirstDown()
-                            rows.getOrNull((down.position.y / rowPx).toInt())?.let(actions::previewNote)
+                            rows.getOrNull((down.position.y / rowPx).toInt())?.let(actions::playKey)
                         }
                     },
                 ) { drawKeyboard(rows, rowPx, measurer) }

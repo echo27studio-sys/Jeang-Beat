@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.GridOn
+import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.ViewTimeline
 import androidx.compose.material3.CircularProgressIndicator
@@ -136,9 +137,11 @@ fun StudioScreen(viewModel: StudioViewModel, files: FileActions, onLanguageChang
     // Engine position, polled once per frame while playing.
     var position by remember { mutableFloatStateOf(0f) }
     LaunchedEffect(state.isPlaying) {
+        var frames = 0
         while (state.isPlaying) {
             withFrameNanos { }
             position = viewModel.positionTicks()
+            if (++frames % 30 == 0) viewModel.syncTransport()
         }
         position = 0f
     }
@@ -343,7 +346,22 @@ private fun TabContent(
                 )
             } else {
                 val actions = remember(vm) { patternActions(vm, onSettings, onAddChannel, onRename, onReplace, patternNameFor) }
-                PatternScreen(project, patternTick, actions)
+                var showPads by rememberSaveable { mutableStateOf(false) }
+                Column(Modifier.fillMaxSize()) {
+                    Box(Modifier.weight(1f)) {
+                        PatternScreen(project, patternTick, actions)
+                        if (!showPads) {
+                            androidx.compose.material3.SmallFloatingActionButton(
+                                onClick = { showPads = true },
+                                containerColor = JbColors.Accent,
+                                modifier = Modifier.align(Alignment.BottomEnd).padding(12.dp),
+                            ) { Icon(Icons.Default.Apps, stringResource(R.string.perform_pads), tint = Color(0xFF1A1400)) }
+                        }
+                    }
+                    if (showPads) {
+                        PerformPads(project.channels, state.recording, vm::padDown, vm::padUp, onClose = { showPads = false }, modifier = Modifier.fillMaxWidth())
+                    }
+                }
             }
         }
         StudioTab.PLAYLIST -> {
@@ -405,6 +423,7 @@ private fun patternActions(
 private fun pianoRollActions(vm: StudioViewModel, channelId: Int) = object : PianoRollActions {
     override fun editNotes(final: Boolean, transform: (List<Note>) -> List<Note>) = vm.editNotes(channelId, final, transform)
     override fun previewNote(pitch: Int) = vm.previewNote(channelId, pitch)
+    override fun playKey(pitch: Int) = vm.playKey(channelId, pitch)
     override fun setSnap(snap: Snap) = vm.setRollSnap(snap)
     override fun setScale(scale: ScaleSetting) = vm.setScale(scale)
     override fun copy(notes: List<Note>) = vm.copyNotes(notes)

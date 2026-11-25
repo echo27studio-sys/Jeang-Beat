@@ -52,6 +52,9 @@ JNIEXPORT void JNICALL JB_FN(nativeSetSampleRate)(JNIEnv*, jobject, jlong ptr, j
 JNIEXPORT jdouble JNICALL JB_FN(nativeLatencyMillis)(JNIEnv*, jobject, jlong ptr) { return from(ptr)->host.outputLatencyMillis(); }
 
 JNIEXPORT void JNICALL JB_FN(nativePlay)(JNIEnv*, jobject, jlong ptr) { from(ptr)->engine.play(); }
+JNIEXPORT void JNICALL JB_FN(nativePlayCountIn)(JNIEnv*, jobject, jlong ptr, jint bars) { from(ptr)->engine.play(bars); }
+JNIEXPORT void JNICALL JB_FN(nativeSetMetronome)(JNIEnv*, jobject, jlong ptr, jboolean on) { from(ptr)->engine.setMetronome(on); }
+JNIEXPORT jboolean JNICALL JB_FN(nativeIsCountingIn)(JNIEnv*, jobject, jlong ptr) { return from(ptr)->engine.isCountingIn(); }
 JNIEXPORT void JNICALL JB_FN(nativeStop)(JNIEnv*, jobject, jlong ptr) { from(ptr)->engine.stop(); }
 JNIEXPORT void JNICALL JB_FN(nativeSetPosition)(JNIEnv*, jobject, jlong ptr, jlong tick) { from(ptr)->engine.setPosition(tick); }
 JNIEXPORT void JNICALL JB_FN(nativeSetPatternPosition)(JNIEnv*, jobject, jlong ptr, jlong tick) { from(ptr)->engine.setPatternPosition(tick); }

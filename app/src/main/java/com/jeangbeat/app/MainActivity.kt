@@ -2,7 +2,12 @@ package com.jeangbeat.app
 
 import android.content.Context
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -60,6 +65,7 @@ class MainActivity : ComponentActivity(), FileActions {
             (b.getSerializable(KEY_EXPORT_OPTIONS) as? ExportOptions)?.let { exportOptions = it }
         }
         enableEdgeToEdge()
+        watchPlayback()
         viewModel.ensureProject(
             defaultName = getString(UiR.string.my_first_beat),
             patternName = getString(UiR.string.pattern_default_name, 1),
@@ -80,12 +86,35 @@ class MainActivity : ComponentActivity(), FileActions {
 
     override fun onStart() {
         super.onStart()
+        (application as JeangBeatApp).visible = true
         viewModel.onForeground()
     }
 
     override fun onStop() {
-        viewModel.onBackground()
+        (application as JeangBeatApp).visible = false
+        // While playing, the foreground service (started with playback) keeps the beat going.
+        if (!viewModel.onBackground()) PlaybackService.stop(this)
         super.onStop()
+    }
+
+    private val notificationPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
+
+    /** Playback runs in a foreground service so it survives the screen going off. */
+    private fun watchPlayback() {
+        lifecycleScope.launch {
+            viewModel.state.map { it.isPlaying }.distinctUntilChanged().collect { playing ->
+                if (playing) {
+                    val settings = (application as JeangBeatApp).settings
+                    if (Build.VERSION.SDK_INT >= 33 && !settings.askedNotifications) {
+                        settings.askedNotifications = true
+                        notificationPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                    }
+                    PlaybackService.start(this@MainActivity)
+                } else {
+                    PlaybackService.stop(this@MainActivity)
+                }
+            }
+        }
     }
 
     // ---- FileActions ----

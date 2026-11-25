@@ -28,7 +28,24 @@ class Settings(context: Context) {
         get() = prefs.getBoolean(KEY_AUTO_PREVIEW, true)
         set(value) = prefs.edit().putBoolean(KEY_AUTO_PREVIEW, value).apply()
 
+    var metronome: Boolean
+        get() = prefs.getBoolean(KEY_METRONOME, false)
+        set(value) = prefs.edit().putBoolean(KEY_METRONOME, value).apply()
+
+    /** Bars of count-in before recording (0 = none). */
+    var countInBars: Int
+        get() = prefs.getInt(KEY_COUNT_IN, 1)
+        set(value) = prefs.edit().putInt(KEY_COUNT_IN, value).apply()
+
+    /** Set once the notification permission was asked for (Android 13+). */
+    var askedNotifications: Boolean
+        get() = prefs.getBoolean(KEY_ASKED_NOTIFICATIONS, false)
+        set(value) = prefs.edit().putBoolean(KEY_ASKED_NOTIFICATIONS, value).apply()
+
     companion object {
+        private const val KEY_METRONOME = "metronome"
+        private const val KEY_COUNT_IN = "count_in_bars"
+        private const val KEY_ASKED_NOTIFICATIONS = "asked_notifications"
         private const val KEY_AUTO_PREVIEW = "browser_auto_preview"
         private const val KEY_LANGUAGE = "language"
         private const val KEY_LAST_PROJECT = "last_project"
